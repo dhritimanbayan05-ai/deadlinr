@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Weeks - The Protocol</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .life-weeks-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            padding-bottom: 6rem;
+        }
+
+        /* Canvas container */
+        .week-canvas-wrap {
+            position: relative;
+            margin-top: 1.5rem;
+            margin-bottom: 2rem;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .week-canvas-wrap canvas {
+            display: block;
+            width: 100%;
+            cursor: crosshair;
+        }
+
+        /* Tooltip */
+        .canvas-tooltip {
+            position: fixed;
+            padding: 0.35rem 0.65rem;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 0.4rem;
+            font-size: 0.7rem;
+            color: #e4e4e7;
+            pointer-events: none;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+        }
+
+        .canvas-tooltip.visible {
+            opacity: 1;
+        }
+
+        .legend {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            background: rgba(24, 24, 27, 0.3);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        /* Floating User Switch Bar */
+        .user-switch-bar {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem;
+            border-radius: 9999px;
+            border: 1px solid var(--border);
+            z-index: 100;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .switch-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.25s;
+            font-family: var(--font-sans);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .switch-btn:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .switch-btn.active {
+            color: var(--background);
+            background: var(--text);
+            font-weight: bold;
+            transform: scale(1.05);
+        }
+
+        /* Glassmorphism for Life Weeks Cards */
+        .life-weeks-container .card {
+            background: rgba(24, 24, 27, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Legend dot colors */
+        .legend-dot.school {
+            background: #a1a1aa;
+            opacity: 0.6;
+        }
+
+        .legend-dot.college {
+            background: #818cf8;
+            opacity: 0.7;
+        }
+
+        .legend-dot.gap {
+            background: #fbbf24;
+            opacity: 0.65;
+        }
+
+        .legend-dot.current {
+            background: #f97316;
+            box-shadow: 0 0 6px rgba(249, 115, 22, 0.5);
+        }
+
+        .legend-dot.future {
+            background: #22c55e;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="life-weeks-container">
+        <header class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <h1 style="font-size: 2rem; font-weight: bold;">Life in Weeks</h1>
+            <a href="index.html" class="btn btn-surface">Dashboard</a>
+        </header>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot school"></div>
+                <span class="text-sm text-muted">School Era</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot college"></div>
+                <span class="text-sm text-muted">College Life</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot gap"></div>
+                <span class="text-sm text-muted">Gap Year</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot current"></div>
+                <span class="text-sm text-muted">Current Week</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot future"></div>
+                <span class="text-sm text-muted">Weeks Remaining</span>
+            </div>
+        </div>
+
+        <div id="user-life-weeks">
+            <!-- Canvas-based life weeks rendered here -->
+        </div>
+    </div>
+
+    <!-- Tooltip element (shared) -->
+    <div class="canvas-tooltip" id="canvas-tooltip"></div>
+
+    <!-- Timeline Edit Modal -->
+    <div class="modal-overlay" id="timeline-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="timeline-modal-title">Edit Timeline</h3>
+                <p class="text-xs text-muted">Set your life milestones</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" id="dob-input" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">College Start Date</label>
+                <input type="date" id="college-start-input" class="form-input">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Gap Years (between school and college)</label>
+                <input type="number" id="gap-years-input" class="form-input" min="0" max="10" value="0">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-surface" onclick="closeTimelineModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTimeline()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="logic.js"></script>
+    <script>
+        let currentUserIndex = 0;
+        const appData = StorageManager.load();
+        const COLS = 52;
+        const TOTAL_WEEKS = 80 * 52; // 4160 weeks
+        const ROWS = 80;
+
+        // ========================================
+        // COLOR PALETTE (matches legend)
+        // ========================================
+        const COLORS = {
+            school: { r: 161, g: 161, b: 170, a: 0.55 },
+            gap: { r: 251, g: 191, b: 36, a: 0.6 },
+            college: { r: 129, g: 140, b: 248, a: 0.65 },
+            lived: { r: 82, g: 82, b: 91, a: 0.45 },
+            current: { r: 249, g: 115, b: 22, a: 1 },
+            future: { r: 34, g: 197, b: 94, a: 0.25 },
+            bg: { r: 9, g: 9, b: 11, a: 1 }
+        };
+
+        // ========================================
+        // CANVAS RENDERER
+        // ========================================
+        let weekData = []; // Stores category for each week for tooltip
+        let canvasEl = null;
+        let dotSize = 0;
+        let gap = 0;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        function renderLifeWeeks() {
+            const container = document.getElementById('user-life-weeks');
+            const user = appData.users[currentUserIndex];
+            if (!user) return;
+
+            const lifeWeeks = user.dob && user.collegeStartDate
+                ? calculateDetailedLifeWeeks(user.dob, user.collegeStartDate, user.gapYears || 0)
+                : calculateLifeWeeks(user.age);
+
+            // Build week classification array (once, cheap)
+            weekData = new Array(TOTAL_WEEKS);
+            for (let i = 0; i < TOTAL_WEEKS; i++) {
+                if (i === lifeWeeks.lived || i === lifeWeeks.current) {
+                    weekData[i] = 'current';
+                } else if (i < lifeWeeks.lived) {
+                    if (i < lifeWeeks.schoolWeeks) {
+                        weekData[i] = 'school';
+                    } else if (lifeWeeks.gapStartWeek && i >= lifeWeeks.gapStartWeek && i < lifeWeeks.gapEndWeek) {
+                        weekData[i] = 'gap';
+                    } else if (lifeWeeks.collegeStartWeek && i >= lifeWeeks.collegeStartWeek) {
+                        weekData[i] = 'college';
+                    } else {
+                        weekData[i] = 'lived';
+                    }
+                } else {
+                    weekData[i] = 'future';
+                }
+            }
+
+            // Build DOM (minimal — just card + canvas)
+            container.innerHTML = `
+                <div class="card">
+                    <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold;">${user.name} <span class="text-muted text-sm">(${user.age} years, ${user.role})</span></h2>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <div class="text-sm text-muted">
+                                <span style="color: var(--accent);">${lifeWeeks.lived}</span> weeks lived •
+                                <span style="color: var(--text-muted);">${lifeWeeks.remaining}</span> remaining
+                            </div>
+                            <button class="btn btn-surface" onclick="openTimelineModal(${currentUserIndex})" style="font-size: 0.75rem; padding: 0.25rem 0.75rem;">
+                                Edit Timeline
+                            </button>
+                        </div>
+                    </div>
+                    <div class="week-canvas-wrap">
+                        <canvas id="life-canvas"></canvas>
+                    </div>
+                </div>
+            `;
+
+            canvasEl = document.getElementById('life-canvas');
+            drawCanvas();
+            setupCanvasTooltip();
+            renderUserSwitchBar();
+        }
+
+        function drawCanvas() {
+            if (!canvasEl) return;
+
+            const wrap = canvasEl.parentElement;
+            const wrapWidth = wrap.clientWidth;
+
+            // Calculate dot sizing: 52 columns + gaps
+            gap = Math.max(1, Math.floor(wrapWidth / 400));
+            dotSize = Math.max(2, Math.floor((wrapWidth - (COLS - 1) * gap) / COLS));
+
+            const canvasW = COLS * dotSize + (COLS - 1) * gap;
+            const canvasH = ROWS * dotSize + (ROWS - 1) * gap;
+
+            // Set actual pixel dimensions (for crisp rendering)
+            const dpr = window.devicePixelRatio || 1;
+            canvasEl.width = canvasW * dpr;
+            canvasEl.height = canvasH * dpr;
+            canvasEl.style.width = canvasW + 'px';
+            canvasEl.style.height = canvasH + 'px';
+
+            offsetX = 0;
+            offsetY = 0;
+
+            const ctx = canvasEl.getContext('2d');
+            ctx.scale(dpr, dpr);
+
+            // Clear
+            ctx.clearRect(0, 0, canvasW, canvasH);
+
+            // Draw all dots in one pass
+            for (let i = 0; i < TOTAL_WEEKS; i++) {
+                const col = i % COLS;
+                const row = Math.floor(i / COLS);
+                const x = col * (dotSize + gap);
+                const y = row * (dotSize + gap);
+
+                const cat = weekData[i] || 'future';
+                const c = COLORS[cat];
+
+                ctx.globalAlpha = c.a;
+                ctx.fillStyle = `rgb(${c.r},${c.g},${c.b})`;
+
+                // Current week: slightly larger with glow
+                if (cat === 'current') {
+                    ctx.globalAlpha = 1;
+                    ctx.shadowColor = `rgba(${c.r},${c.g},${c.b},0.7)`;
+                    ctx.shadowBlur = 6;
+                    ctx.fillRect(x, y, dotSize, dotSize);
+                    ctx.shadowBlur = 0;
+                } else {
+                    ctx.fillRect(x, y, dotSize, dotSize);
+                }
+            }
+
+            ctx.globalAlpha = 1;
+        }
+
+        // ========================================
+        // TOOLTIP (mousemove on canvas)
+        // ========================================
+        function setupCanvasTooltip() {
+            const tooltip = document.getElementById('canvas-tooltip');
+            if (!canvasEl) return;
+
+            const LABELS = {
+                school: 'School Era',
+                gap: 'Gap Year',
+                college: 'College Life',
+                lived: 'Lived',
+                current: 'Current Week',
+                future: 'Future'
+            };
+
+            canvasEl.addEventListener('mousemove', (e) => {
+                const rect = canvasEl.getBoundingClientRect();
+                const scaleX = canvasEl.clientWidth / (COLS * dotSize + (COLS - 1) * gap);
+                const mx = (e.clientX - rect.left) / scaleX;
+                const my = (e.clientY - rect.top) / scaleX;
+
+                const col = Math.floor(mx / (dotSize + gap));
+                const row = Math.floor(my / (dotSize + gap));
+
+                if (col >= 0 && col < COLS && row >= 0 && row < ROWS) {
+                    const idx = row * COLS + col;
+                    if (idx < TOTAL_WEEKS && weekData[idx]) {
+                        const cat = weekData[idx];
+                        const yearNum = Math.floor(idx / 52) + 1;
+                        const weekNum = (idx % 52) + 1;
+                        tooltip.textContent = `Year ${yearNum}, Week ${weekNum} — ${LABELS[cat]}`;
+                        tooltip.style.left = (e.clientX + 12) + 'px';
+                        tooltip.style.top = (e.clientY - 30) + 'px';
+                        tooltip.classList.add('visible');
+                        return;
+                    }
+                }
+                tooltip.classList.remove('visible');
+            });
+
+            canvasEl.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('visible');
+            });
+        }
+
+        // ========================================
+        // RESIZE HANDLER (debounced)
+        // ========================================
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(drawCanvas, 200);
+        });
+
+        // ========================================
+        // USER SWITCHING
+        // ========================================
+        window.switchUser = function (index) {
+            currentUserIndex = index;
+            renderLifeWeeks();
+        }
+
+        function renderUserSwitchBar() {
+            let bar = document.getElementById('user-switch-bar');
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'user-switch-bar';
+                bar.className = 'user-switch-bar';
+                document.body.appendChild(bar);
+            }
+
+            bar.innerHTML = appData.users.map((user, index) => `
+                <button
+                    class="switch-btn ${index === currentUserIndex ? 'active' : ''}"
+                    onclick="switchUser(${index})"
+                >
+                    ${user.name}
+                </button>
+            `).join('');
+        }
+
+        // ========================================
+        // TIMELINE MODAL
+        // ========================================
+        let editingUserIndex = -1;
+        const timelineModal = document.getElementById('timeline-modal');
+
+        function openTimelineModal(userIndex) {
+            editingUserIndex = userIndex;
+            const user = appData.users[userIndex];
+            document.getElementById('dob-input').value = user.dob || '';
+            document.getElementById('college-start-input').value = user.collegeStartDate || '';
+            document.getElementById('gap-years-input').value = user.gapYears || 0;
+            timelineModal.classList.add('open');
+        }
+
+        function closeTimelineModal() {
+            timelineModal.classList.remove('open');
+            editingUserIndex = -1;
+        }
+
+        function saveTimeline() {
+            if (editingUserIndex === -1) return;
+            const user = appData.users[editingUserIndex];
+            user.dob = document.getElementById('dob-input').value;
+            user.collegeStartDate = document.getElementById('college-start-input').value;
+            user.gapYears = parseInt(document.getElementById('gap-years-input').value) || 0;
+
+            if (user.dob) {
+                const birthDate = new Date(user.dob);
+                const now = new Date();
+                user.age = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24 * 365.25));
+            }
+
+            StorageManager.save(appData);
+            renderLifeWeeks();
+            closeTimelineModal();
+        }
+
+        timelineModal.addEventListener('click', (e) => {
+            if (e.target === timelineModal) closeTimelineModal();
+        });
+
+        // ========================================
+        // BOOT
+        // ========================================
+        document.addEventListener('DOMContentLoaded', () => renderLifeWeeks());
+    </script>
+</body>
+
+</html>

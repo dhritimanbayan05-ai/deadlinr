@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Protocol - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="flex justify-between items-center" style="margin-bottom: 2rem;">
+            <h1 style="font-size: 2.5rem; font-weight: bold; letter-spacing: -0.05em;">The Protocol</h1>
+            <div class="flex gap-4">
+                <a href="timetable.html" class="btn btn-surface">Timetable</a>
+                <a href="lifeweeks.html" class="btn btn-surface">Life Weeks</a>
+                <button class="btn btn-primary" id="check-in-btn">Check In</button>
+            </div>
+        </header>
+
+        <!-- User Switcher Pills -->
+        <div class="user-switcher" id="user-switcher">
+            <!-- User pills will be dynamically generated -->
+        </div>
+
+        <!-- Dashboard Hero Section -->
+        <section class="dashboard-hero" id="dashboard-hero">
+            <div class="dashboard-header">
+                <h2 class="dashboard-title" id="dashboard-title">Dashboard</h2>
+                <div class="dashboard-stats-mini">
+                    <div class="stat-mini">
+                        <span class="stat-dot streak-dot"></span>
+                        <span id="user-streak">0</span>
+                    </div>
+                    <div class="stat-mini">
+                        <span class="stat-dot momentum-dot"></span>
+                        <span id="user-momentum">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Task Section -->
+            <div class="add-task-section">
+                <h3 class="section-subtitle">Add New Task</h3>
+                <div class="task-form">
+                    <input type="text" id="task-name-input" class="form-input" placeholder="Task name...">
+                    <div class="form-row">
+                        <select id="task-type-select" class="form-select">
+                            <option value="work">Work</option>
+                            <option value="gym">Gym</option>
+                            <option value="sleep">Sleep</option>
+                            <option value="fun">Fun</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <select id="task-day-select" class="form-select">
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                            <option value="Friday">Friday</option>
+                            <option value="Saturday">Saturday</option>
+                            <option value="Sunday">Sunday</option>
+                        </select>
+                        <select id="task-time-select" class="form-select">
+                            <option value="6 AM">6 AM</option>
+                            <option value="7 AM">7 AM</option>
+                            <option value="8 AM">8 AM</option>
+                            <option value="9 AM">9 AM</option>
+                            <option value="10 AM">10 AM</option>
+                            <option value="11 AM">11 AM</option>
+                            <option value="12 PM">12 PM</option>
+                            <option value="1 PM">1 PM</option>
+                            <option value="2 PM">2 PM</option>
+                            <option value="3 PM">3 PM</option>
+                            <option value="4 PM">4 PM</option>
+                            <option value="5 PM">5 PM</option>
+                            <option value="6 PM">6 PM</option>
+                            <option value="7 PM">7 PM</option>
+                            <option value="8 PM">8 PM</option>
+                            <option value="9 PM">9 PM</option>
+                            <option value="10 PM">10 PM</option>
+                            <option value="11 PM">11 PM</option>
+                        </select>
+                    </div>
+                    <button id="add-task-btn" class="btn btn-primary" style="width: 100%;">Add to Schedule</button>
+                </div>
+            </div>
+
+            <!-- Today's Tasks -->
+            <div class="today-tasks-section">
+                <h3 class="section-subtitle">Today's Schedule</h3>
+                <div id="today-tasks-list" class="dashboard-task-list">
+                    <!-- Tasks will be dynamically generated -->
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <a href="timetable.html" class="quick-action-link">
+                    View Full Timetable
+                </a>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section class="stats-grid">
+            <div class="stat-card glassmorphic">
+                <h3 class="stat-label">Team Momentum</h3>
+                <div class="stat-value-large" id="team-momentum">0</div>
+                <p class="stat-description">Combined Score</p>
+            </div>
+            <div class="stat-card glassmorphic">
+                <h3 class="stat-label">Rival Mode</h3>
+                <div class="stat-value-medium" id="rival-leader">—</div>
+                <p class="stat-description" id="rival-reset">Reset in — days</p>
+            </div>
+            <div class="stat-card glassmorphic roast-card">
+                <h3 class="stat-label">Roast Feed</h3>
+                <p class="roast-text" id="roast-text">"Loading roasts..."</p>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Login Modal -->
+    <div class="login-modal-overlay" id="login-modal">
+        <div class="login-modal-content">
+            <h2 class="login-modal-title">Select Your Profile</h2>
+            <p class="login-modal-subtitle">Choose your account to continue</p>
+            <div class="user-cards" id="user-cards-container">
+                <!-- User cards will be dynamically generated -->
+            </div>
+        </div>
+    </div>
+
+    <script src="logic.js"></script>
+    <script src="auth.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+
+</html>

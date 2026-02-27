@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Timetable - The Protocol</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* ========== PAGE LAYOUT ========== */
+        .tt-page {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .tt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .tt-header-left h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .tt-header-right {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        /* ========== WEEK STATUS BADGE ========== */
+        .week-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            transition: all 0.3s;
+        }
+
+        .week-status.planning {
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+        }
+
+        .week-status.locked {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        /* ========== WEEKLY LINE GRAPH (TOP) ========== */
+        .weekly-line-section {
+            background: rgba(24, 24, 27, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .weekly-line-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .weekly-line-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .weekly-line-stats {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .wl-stat {
+            text-align: center;
+        }
+
+        .wl-stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .wl-stat-value.green {
+            color: #10b981;
+        }
+
+        .wl-stat-value.amber {
+            color: #f59e0b;
+        }
+
+        .wl-stat-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.06em;
+            margin-top: 0.15rem;
+        }
+
+        .line-chart-container {
+            position: relative;
+            height: 120px;
+            width: 100%;
+        }
+
+        .line-chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .line-chart-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            padding: 0 2%;
+        }
+
+        .line-chart-labels span {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .line-chart-labels span.today-label {
+            color: #10b981;
+            font-weight: 700;
+        }
+
+        /* ========== TIMETABLE GRID ========== */
+        .timetable-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 1px;
+            background-color: rgba(39, 39, 42, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .time-cell,
+        .day-header,
+        .task-cell {
+            background-color: rgba(9, 9, 11, 0.7);
+            backdrop-filter: blur(8px);
+            padding: 0.4rem;
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .day-header {
+            background-color: rgba(39, 39, 42, 0.8);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text);
+            min-height: 44px;
+            font-size: 0.75rem;
+        }
+
+        .day-header.today-col {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .time-cell {
+            font-family: var(--font-mono);
+            border-right: 1px solid rgba(39, 39, 42, 0.5);
+            font-size: 0.65rem;
+        }
+
+        .task-cell {
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            flex-direction: column;
+            gap: 0.2rem;
+            text-align: center;
+        }
+
+        .task-cell:hover {
+            background-color: rgba(39, 39, 42, 0.5);
+        }
+
+        .task-cell.locked-cell {
+            cursor: default;
+        }
+
+        .task-cell.locked-cell:hover {
+            background-color: rgba(9, 9, 11, 0.7);
+        }
+
+        /* Task content chip */
+        .task-content {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            padding: 0.2rem 0.3rem;
+            font-weight: 500;
+            color: #fff;
+            font-size: 0.65rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            line-height: 1.3;
+            transition: all 0.3s;
+        }
+
+        .task-work {
+            background: linear-gradient(135deg, #15803d, #22c55e);
+        }
+
+        .task-gym {
+            background: linear-gradient(135deg, #c2410c, #f97316);
+        }
+
+        .task-sleep {
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        }
+
+        .task-fun {
+            background: linear-gradient(135deg, #be185d, #ec4899);
+        }
+
+        .task-other {
+            background: linear-gradient(135deg, #3f3f46, #71717a);
+        }
+
+        /* ========== CHECK-IN BUTTON ========== */
+        .checkin-btn {
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55rem;
+            transition: all 0.25s;
+            z-index: 5;
+        }
+
+        .checkin-btn:hover {
+            border-color: #10b981;
+            color: #10b981;
+            transform: scale(1.15);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .checkin-btn.checked {
+            background: #10b981;
+            border-color: #10b981;
+            color: #000;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        }
+
+        .task-cell.cell-checked {
+            background: rgba(16, 185, 129, 0.06) !important;
+        }
+
+        .task-cell.cell-checked .task-content {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+
+        /* ========== BOTTOM SECTION: DAILY + HABIT ========== */
+        .bottom-section {
+            margin-top: 1.5rem;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Daily Progress Cards */
+        .daily-progress-card {
+            background: rgba(24, 24, 27, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+
+        .daily-progress-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .daily-bars-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+
+        .daily-bar-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .daily-bar-track {
+            height: 80px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .daily-bar-fill {
+            width: 100%;
+            max-width: 28px;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 3px;
+        }
+
+        .daily-bar-fill.productive {
+            background: linear-gradient(to top, #059669, #34d399);
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.25);
+        }
+
+        .daily-bar-fill.neutral {
+            background: linear-gradient(to top, #3f3f46, #52525b);
+        }
+
+        .daily-bar-rate {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.2rem;
+        }
+
+        .daily-bar-label {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .daily-bar-margin {
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 0.15rem;
+            letter-spacing: 0.03em;
+        }
+
+        .daily-bar-margin.productive {
+            color: #34d399;
+        }
+
+        .daily-bar-margin.neutral {
+            color: #71717a;
+        }
+
+        .daily-bar-item.today-item {
+            position: relative;
+        }
+
+        .daily-bar-item.today-item::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: #10b981;
+            border-radius: 50%;
+        }
+
+        /* Habit / Monthly Uncompleted Card */
+        .habit-card {
+            background: rgba(24, 24, 27, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 1.25rem;
+        }
+
+        .habit-card-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* Today's progress ring */
+        .today-progress {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .progress-ring-container {
+            width: 56px;
+            height: 56px;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 4;
+        }
+
+        .progress-ring-fill {
+            fill: none;
+            stroke: #10b981;
+            stroke-width: 4;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .progress-ring-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .today-stats .stat-line {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .today-stats .stat-line strong {
+            color: var(--text);
+        }
+
+        /* Monthly uncompleted list */
+        .monthly-uncompleted {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .month-week-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .month-week-label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            width: 50px;
+            flex-shrink: 0;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .month-week-bar-track {
+            flex: 1;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .month-week-bar-done {
+            height: 100%;
+            background: linear-gradient(90deg, #059669, #34d399);
+            border-radius: 5px;
+            transition: width 0.5s;
+        }
+
+        .month-week-bar-missed {
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            background: rgba(244, 63, 94, 0.3);
+            border-radius: 0 5px 5px 0;
+        }
+
+        .month-week-count {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            width: 65px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .month-week-count .missed {
+            color: #f43f5e;
+            font-weight: 600;
+        }
+
+        /* ========== LOCK WEEK SECTION ========== */
+        .lock-section {
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            background: rgba(24, 24, 27, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+        }
+
+        .lock-info {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .lock-info strong {
+            color: var(--text);
+        }
+
+        .btn-lock {
+            padding: 0.75rem 2rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+            font-family: var(--font-sans);
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+
+        .btn-lock.lock {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #000;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-lock.lock:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-lock.unlock {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .btn-lock.unlock:hover {
+            background: rgba(251, 191, 36, 0.25);
+        }
+
+        /* ========== MODAL ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: transform 0.2s;
+        }
+
+        .modal-overlay.open .modal-content {
+            transform: scale(1);
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 900px) {
+            .bottom-section {
+                grid-template-columns: 1fr;
+            }
+
+            .tt-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tt-page">
+        <!-- Header -->
+        <header class="tt-header">
+            <div class="tt-header-left">
+                <h1>Weekly Timetable</h1>
+                <p class="text-muted text-sm">Plan your protocol. Own your time.</p>
+            </div>
+            <div class="tt-header-right">
+                <div class="week-status planning" id="week-status-badge">
+                    <span id="week-status-text">Planning Mode</span>
+                </div>
+                <select id="user-select" class="btn btn-surface" onchange="onUserSwitch()">
+                </select>
+                <a href="index.html" class="btn btn-primary">Dashboard</a>
+            </div>
+        </header>
+
+        <!-- Weekly Line Graph (TOP) -->
+        <div class="weekly-line-section" id="weekly-line-section">
+        </div>
+
+        <!-- Timetable Grid -->
+        <div class="timetable-grid" id="timetable">
+        </div>
+
+        <!-- Lock Week Section -->
+        <div class="lock-section" id="lock-section">
+        </div>
+
+        <!-- Bottom: Daily Progress + Habit Tracking -->
+        <div class="bottom-section">
+            <div class="daily-progress-card" id="daily-progress">
+            </div>
+            <div class="habit-card" id="habit-card">
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal-overlay" id="task-modal">
+        <div class="modal-content">
+            <div class="modal-header" style="margin-bottom: 1.5rem;">
+                <h3 style="font-size: 1.25rem; font-weight: bold; color: var(--text);" id="modal-title">Edit Slot</h3>
+                <p class="text-xs text-muted" id="modal-subtitle">Monday - 9 AM</p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Task Name</label>
+                <input type="text" id="task-name-input" class="form-input" placeholder="e.g. Deep Work, Gym, Reading..."
+                    autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Category</label>
+                <select id="task-type-input" class="form-select">
+                    <option value="work">Work / Study</option>
+                    <option value="gym">Gym / Health</option>
+                    <option value="sleep">Sleep / Rest</option>
+                    <option value="fun">Fun / Social</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem;">
+                <button class="btn" style="color: var(--danger);" onclick="deleteTask()">Clear</button>
+                <button class="btn btn-surface" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTask()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="logic.js"></script>
+    <script>
+        // ========================================
+        // CONSTANTS & STATE
+        // ========================================
+        const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        const HOURS = ['6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', '8 PM', '9 PM', '10 PM', '11 PM'];
+
+        let currentKey = null;
+        let currentUser = null;
+        let appData = null;
+
+        // ========================================
+        // INITIALIZATION
+        // ========================================
+        function init() {
+            appData = StorageManager.load();
+            const select = document.getElementById('user-select');
+            select.innerHTML = appData.users.map(u => `<option value="${u.name}">${u.name} (${u.role})</option>`).join('');
+
+            autoUnlockIfNewWeek();
+            renderAll();
+        }
+
+        function onUserSwitch() {
+            appData = StorageManager.load();
+            renderAll();
+        }
+
+        function renderAll() {
+            const userName = document.getElementById('user-select').value;
+            const user = appData.users.find(u => u.name === userName);
+            currentUser = user;
+
+            if (!user.timetable) user.timetable = {};
+            if (!user.checkIns) user.checkIns = {};
+
+            renderWeekStatus();
+            renderWeeklyLineGraph();
+            renderTimetable();
+            renderLockSection();
+            renderDailyProgress();
+            renderHabitCard();
+        }
+
+        // ========================================
+        // WEEK LOCK LOGIC
+        // ========================================
+        function autoUnlockIfNewWeek() {
+            const currentWeekStart = getWeekStartStr();
+            appData.users.forEach(user => {
+                if (user.isWeekLocked && user.weekPlan) {
+                    if (user.weekPlan.lockedWeekStart !== currentWeekStart) {
+                        user.isWeekLocked = false;
+                        user.weekPlan = null;
+                    }
+                }
+            });
+            StorageManager.save(appData);
+        }
+
+        function lockWeek() {
+            if (!currentUser) return;
+            const taskCount = Object.keys(currentUser.timetable || {}).length;
+            if (taskCount === 0) return; // Need at least one task
+
+            currentUser.weekPlan = {
+                lockedDate: new Date().toISOString(),
+                lockedWeekStart: getWeekStartStr(),
+                tasks: JSON.parse(JSON.stringify(currentUser.timetable))
+            };
+            currentUser.isWeekLocked = true;
+            StorageManager.save(appData);
+            renderAll();
+        }
+
+        function unlockWeek() {
+            if (!currentUser) return;
+            currentUser.isWeekLocked = false;
+            currentUser.weekPlan = null;
+            StorageManager.save(appData);
+            renderAll();
+        }
+
+        function renderWeekStatus() {
+            const badge = document.getElementById('week-status-badge');
+            const text = document.getElementById('week-status-text');
+            if (currentUser && currentUser.isWeekLocked) {
+                badge.className = 'week-status locked';
+                text.textContent = 'Week Locked';
+            } else {
+                badge.className = 'week-status planning';
+                text.textContent = 'Planning Mode';
+            }
+        }
+
+        function renderLockSection() {
+            const section = document.getElementById('lock-section');
+            if (currentUser && currentUser.isWeekLocked) {
+                const lockDate = currentUser.weekPlan ? new Date(currentUser.weekPlan.lockedDate).toLocaleDateString() : '--';
+                section.innerHTML = `
+                    <div class="lock-info">
+                        <strong>Week plan locked</strong> on ${lockDate}.
+                        Check in your tasks daily. Plan unlocks automatically next Monday.
+                    </div>
+                    <button class="btn-lock unlock" onclick="unlockWeek()">Unlock Early</button>
+                `;
+            } else {
+                const taskCount = Object.keys(currentUser?.timetable || {}).length;
+                section.innerHTML = `
+                    <div class="lock-info">
+                        <strong>Planning mode</strong> -- Set up your week's tasks (${taskCount} scheduled),
+                        then lock the plan to start checking in.
+                    </div>
+                    <button class="btn-lock lock" onclick="lockWeek()">Lock This Week</button>
+                `;
+            }
+        }
+
+        // ========================================
+        // WEEKLY LINE GRAPH (TOP)
+        // ========================================
+        function renderWeeklyLineGraph() {
+            const container = document.getElementById('weekly-line-section');
+            if (!currentUser) return;
+
+            const todayName = getCurrentDayName();
+            const weekDates = getWeekDates();
+            let totalChecked = 0, totalTasks = 0;
+
+            const rates = [];
+            DAYS.forEach((day, i) => {
+                const prod = getProductivityForDay(currentUser, weekDates[i], day);
+                totalChecked += prod.checked;
+                totalTasks += prod.total;
+                rates.push(prod.total > 0 ? Math.round((prod.checked / prod.total) * 100) : null);
+            });
+
+            const overallRate = totalTasks > 0 ? Math.round((totalChecked / totalTasks) * 100) : 0;
+            const streak = calculateCheckInStreak(currentUser);
+
+            // Build SVG line chart
+            const svgW = 600, svgH = 100;
+            const padX = 30, padY = 10;
+            const chartW = svgW - padX * 2;
+            const chartH = svgH - padY * 2;
+
+            // Grid lines
+            let gridLines = '';
+            for (let p = 0; p <= 100; p += 25) {
+                const y = padY + chartH - (p / 100) * chartH;
+                gridLines += `<line x1="${padX}" y1="${y}" x2="${svgW - padX}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>`;
+                if (p === 0 || p === 50 || p === 100) {
+                    gridLines += `<text x="${padX - 5}" y="${y + 3}" fill="rgba(255,255,255,0.25)" font-size="8" text-anchor="end">${p}</text>`;
+                }
+            }
+
+            // Points & line
+            const points = [];
+            const validPoints = [];
+            DAYS.forEach((day, i) => {
+                const x = padX + (i / 6) * chartW;
+                const rate = rates[i];
+                if (rate !== null) {
+                    const y = padY + chartH - (rate / 100) * chartH;
+                    points.push({ x, y, rate, day, isToday: day === todayName });
+                    validPoints.push(`${x},${y}`);
+                }
+            });
+
+            // Gradient area fill
+            let areaPath = '';
+            if (validPoints.length > 1) {
+                const baseY = padY + chartH;
+                areaPath = `<path d="M${validPoints[0]} ${validPoints.join(' L')} L${points[points.length - 1].x},${baseY} L${points[0].x},${baseY} Z" fill="url(#lineGrad)" opacity="0.3"/>`;
+            }
+
+            const linePath = validPoints.length > 1
+                ? `<polyline points="${validPoints.join(' ')}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
+                : '';
+
+            let dotsHtml = '';
+            points.forEach(p => {
+                const r = p.isToday ? 5 : 3.5;
+                const glow = p.isToday ? `<circle cx="${p.x}" cy="${p.y}" r="8" fill="rgba(16,185,129,0.2)"/>` : '';
+                dotsHtml += `${glow}<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="#10b981" stroke="#09090b" stroke-width="1.5"/>`;
+                dotsHtml += `<text x="${p.x}" y="${p.y - 10}" fill="var(--text)" font-size="9" font-weight="600" text-anchor="middle">${p.rate}%</text>`;
+            });
+
+            // Day labels
+            const dayLabelsHtml = DAYS.map((day, i) => {
+                const x = padX + (i / 6) * chartW;
+                const isT = day === todayName;
+                return `<text x="${x}" y="${svgH + 2}" fill="${isT ? '#10b981' : 'rgba(255,255,255,0.3)'}" font-size="9" font-weight="${isT ? '700' : '500'}" text-anchor="middle">${day.slice(0, 3)}</text>`;
+            }).join('');
+
+            container.innerHTML = `
+                <div class="weekly-line-header">
+                    <div class="weekly-line-title">Weekly Progress</div>
+                    <div class="weekly-line-stats">
+                        <div class="wl-stat">
+                            <div class="wl-stat-value green">${overallRate}%</div>
+                            <div class="wl-stat-label">Completion</div>
+                        </div>
+                        <div class="wl-stat">
+                            <div class="wl-stat-value amber">${streak}</div>
+                            <div class="wl-stat-label">Day Streak</div>
+                        </div>
+                    </div>
+                </div>
+                <svg viewBox="0 0 ${svgW} ${svgH + 12}" style="width:100%;height:auto;">
+                    <defs>
+                        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#10b981" stop-opacity="0.4"/>
+                            <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    ${gridLines}
+                    ${areaPath}
+                    ${linePath}
+                    ${dotsHtml}
+                    ${dayLabelsHtml}
+                </svg>
+            `;
+        }
+
+        // ========================================
+        // TIMETABLE GRID — CHECK-IN ON ALL TASKS
+        // ========================================
+        function renderTimetable() {
+            const grid = document.getElementById('timetable');
+            grid.innerHTML = '';
+            if (!currentUser) return;
+
+            const todayName = getCurrentDayName();
+            const isLocked = currentUser.isWeekLocked;
+            const weekDates = getWeekDates();
+
+            // Header row
+            grid.appendChild(createCell('', 'time-cell'));
+            DAYS.forEach(day => {
+                const cell = createCell(day.slice(0, 3), 'day-header');
+                if (day === todayName) cell.classList.add('today-col');
+                grid.appendChild(cell);
+            });
+
+            // Time rows
+            HOURS.forEach(hour => {
+                grid.appendChild(createCell(hour, 'time-cell'));
+
+                DAYS.forEach((day, dayIdx) => {
+                    const key = `${day}-${hour}`;
+                    const taskData = currentUser.timetable[key];
+                    const dateStr = weekDates[dayIdx];
+
+                    let taskName = '';
+                    let taskType = 'other';
+
+                    if (typeof taskData === 'string') {
+                        taskName = taskData;
+                    } else if (taskData && typeof taskData === 'object') {
+                        taskName = taskData.name;
+                        taskType = taskData.type;
+                    }
+
+                    const cell = document.createElement('div');
+                    cell.className = 'task-cell';
+
+                    // Check-in status for this day
+                    const dayCheckIns = (currentUser.checkIns && currentUser.checkIns[dateStr]) || {};
+                    const isChecked = dayCheckIns[key] === true;
+
+                    if (isLocked) {
+                        cell.classList.add('locked-cell');
+                    }
+
+                    if (isChecked) {
+                        cell.classList.add('cell-checked');
+                    }
+
+                    if (taskName) {
+                        cell.innerHTML = `<div class="task-content task-${taskType}">${taskName}</div>`;
+
+                        // Show check-in button on ALL task cells always
+                        const btn = document.createElement('button');
+                        btn.className = `checkin-btn ${isChecked ? 'checked' : ''}`;
+                        btn.textContent = isChecked ? '✓' : '○';
+                        btn.onclick = (e) => {
+                            e.stopPropagation();
+                            toggleCheckIn(key, dateStr);
+                        };
+                        cell.appendChild(btn);
+                    }
+
+                    // Only allow editing if NOT locked
+                    if (!isLocked) {
+                        cell.onclick = () => openModal(key, taskName, taskType);
+                    }
+
+                    grid.appendChild(cell);
+                });
+            });
+        }
+
+        function createCell(content, className) {
+            const cell = document.createElement('div');
+            cell.className = className;
+            cell.textContent = content;
+            return cell;
+        }
+
+        // ========================================
+        // CHECK-IN LOGIC
+        // ========================================
+        function toggleCheckIn(key, dateStr) {
+            if (!currentUser) return;
+            if (!currentUser.checkIns) currentUser.checkIns = {};
+            if (!currentUser.checkIns[dateStr]) currentUser.checkIns[dateStr] = {};
+            currentUser.checkIns[dateStr][key] = !currentUser.checkIns[dateStr][key];
+            StorageManager.save(appData);
+            renderAll();
+        }
+
+        // ========================================
+        // DAILY PROGRESS (BOTTOM LEFT)
+        // ========================================
+        function renderDailyProgress() {
+            const container = document.getElementById('daily-progress');
+            if (!currentUser) return;
+
+            const todayName = getCurrentDayName();
+            const weekDates = getWeekDates();
+
+            let barsHtml = '';
+            DAYS.forEach((day, i) => {
+                const prod = getProductivityForDay(currentUser, weekDates[i], day);
+                const rate = prod.total > 0 ? Math.round((prod.checked / prod.total) * 100) : 0;
+                const barH = prod.total > 0 ? Math.max((rate / 100) * 70, 3) : 3;
+                const isProductive = rate >= 50;
+                const isToday = day === todayName;
+                const marginClass = prod.total > 0 ? (isProductive ? 'productive' : 'neutral') : '';
+                const marginText = prod.total > 0 ? (isProductive ? 'Productive' : 'Neutral') : '';
+
+                barsHtml += `
+                    <div class="daily-bar-item ${isToday ? 'today-item' : ''}">
+                        <div class="daily-bar-track">
+                            <div class="daily-bar-fill ${isProductive ? 'productive' : 'neutral'}" style="height: ${barH}px;"></div>
+                        </div>
+                        <div class="daily-bar-rate">${prod.total > 0 ? rate + '%' : '--'}</div>
+                        <div class="daily-bar-label">${day.slice(0, 3)}</div>
+                        ${marginText ? `<div class="daily-bar-margin ${marginClass}">${marginText}</div>` : ''}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = `
+                <div class="daily-progress-title">Daily Progress</div>
+                <div class="daily-bars-row">${barsHtml}</div>
+            `;
+        }
+
+        // ========================================
+        // HABIT CARD (BOTTOM RIGHT) — Today + Monthly Uncompleted
+        // ========================================
+        function renderHabitCard() {
+            const container = document.getElementById('habit-card');
+            if (!currentUser) return;
+
+            const todayStr = getTodayStr();
+            const todayName = getCurrentDayName();
+            const todayProd = getProductivityForDay(currentUser, todayStr, todayName);
+            const todayRate = todayProd.total > 0 ? Math.round((todayProd.checked / todayProd.total) * 100) : 0;
+
+            // SVG ring
+            const circumference = 2 * Math.PI * 22;
+            const offset = circumference - (todayRate / 100) * circumference;
+
+            // Monthly uncompleted — get past 4 weeks
+            const weekLabels = ['This Week', 'Last Week', '2 Weeks Ago', '3 Weeks Ago'];
+            let monthlyHtml = '';
+
+            for (let w = 0; w < 4; w++) {
+                let weekTotal = 0, weekChecked = 0;
+                for (let d = 0; d < 7; d++) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - (w * 7 + (6 - d)));
+                    const dateStr = date.toISOString().split('T')[0];
+                    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+                    const prod = getProductivityForDay(currentUser, dateStr, dayName);
+                    weekTotal += prod.total;
+                    weekChecked += prod.checked;
+                }
+
+                const missed = weekTotal - weekChecked;
+                const pct = weekTotal > 0 ? Math.round((weekChecked / weekTotal) * 100) : 0;
+                const missedPct = weekTotal > 0 ? Math.round((missed / weekTotal) * 100) : 0;
+
+                monthlyHtml += `
+                    <div class="month-week-row">
+                        <div class="month-week-label">${weekLabels[w]}</div>
+                        <div class="month-week-bar-track">
+                            <div class="month-week-bar-done" style="width: ${pct}%;"></div>
+                            ${missed > 0 ? `<div class="month-week-bar-missed" style="width: ${missedPct}%;"></div>` : ''}
+                        </div>
+                        <div class="month-week-count">
+                            ${missed > 0 ? `<span class="missed">${missed} missed</span>` : `${weekChecked}/${weekTotal}`}
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="habit-card-title">Check-in Summary</div>
+
+                <div class="today-progress">
+                    <div class="progress-ring-container">
+                        <svg class="progress-ring" width="56" height="56">
+                            <circle class="progress-ring-bg" cx="28" cy="28" r="22"></circle>
+                            <circle class="progress-ring-fill" cx="28" cy="28" r="22"
+                                stroke-dasharray="${circumference}"
+                                stroke-dashoffset="${offset}"></circle>
+                        </svg>
+                        <div class="progress-ring-text">${todayRate}%</div>
+                    </div>
+                    <div class="today-stats">
+                        <div class="stat-line"><strong>${todayProd.checked}</strong> of <strong>${todayProd.total}</strong> done today</div>
+                        <div class="stat-line">${todayProd.total - todayProd.checked} remaining</div>
+                    </div>
+                </div>
+
+                <div class="habit-card-title" style="margin-top: 0.25rem;">Monthly Tracking</div>
+                <div class="monthly-uncompleted">${monthlyHtml}</div>
+            `;
+        }
+
+        // ========================================
+        // HELPERS
+        // ========================================
+        function getWeekDates() {
+            const dates = [];
+            const now = new Date();
+            const day = now.getDay();
+            const mondayOffset = day === 0 ? -6 : 1 - day;
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(now);
+                d.setDate(now.getDate() + mondayOffset + i);
+                dates.push(d.toISOString().split('T')[0]);
+            }
+            return dates;
+        }
+
+        function getProductivityForDay(user, dateStr, dayName) {
+            const checkIns = (user.checkIns && user.checkIns[dateStr]) || {};
+            let total = 0, checked = 0;
+            Object.keys(user.timetable || {}).forEach(key => {
+                if (key.startsWith(dayName + '-')) {
+                    total++;
+                    if (checkIns[key]) checked++;
+                }
+            });
+            return { total, checked };
+        }
+
+        // ========================================
+        // MODAL LOGIC
+        // ========================================
+        const modal = document.getElementById('task-modal');
+        const nameInput = document.getElementById('task-name-input');
+        const typeInput = document.getElementById('task-type-input');
+        const titleEl = document.getElementById('modal-title');
+        const subtitleEl = document.getElementById('modal-subtitle');
+
+        function openModal(key, currentName, currentType) {
+            currentKey = key;
+            const [day, hour] = key.split('-');
+            subtitleEl.textContent = `${day} - ${hour}`;
+            nameInput.value = currentName || '';
+            typeInput.value = currentType || 'work';
+            modal.classList.add('open');
+            nameInput.focus();
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+            currentKey = null;
+        }
+
+        function saveTask() {
+            if (!currentKey || !currentUser) return;
+            const name = nameInput.value.trim();
+            const type = typeInput.value;
+            const user = appData.users.find(u => u.name === currentUser.name);
+            if (name) {
+                user.timetable[currentKey] = { name, type };
+            } else {
+                delete user.timetable[currentKey];
+            }
+            StorageManager.save(appData);
+            renderAll();
+            closeModal();
+        }
+
+        function deleteTask() {
+            nameInput.value = '';
+            saveTask();
+        }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') saveTask();
+        });
+
+        // ========================================
+        // BOOT
+        // ========================================
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>
