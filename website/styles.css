@@ -171,12 +171,13 @@ h3 {
 }
 
 .header-actions {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
     display: flex;
+    justify-content: center;
+    align-items: center;
     gap: 1rem;
+    margin-top: 1rem;
+    width: 100%;
+    flex-wrap: wrap;
 }
 
 /* Component Classes */
