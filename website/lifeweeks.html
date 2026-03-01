@@ -4,10 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Life Weeks - The Protocol</title>
+    <title>Life Weeks - Deadlinr</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
         .life-weeks-container {
@@ -156,15 +158,130 @@
             background: #22c55e;
             opacity: 0.3;
         }
+
+        /* ========== RESPONSIVE — TABLET (≤ 768px) ========== */
+        @media (max-width: 768px) {
+            .life-weeks-container {
+                padding: 1rem;
+                padding-bottom: 5rem;
+            }
+
+            .life-weeks-container header.flex {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .life-weeks-container header h1 {
+                font-size: 1.5rem;
+            }
+
+            .legend {
+                gap: 1rem;
+                padding: 0.75rem 1.25rem;
+            }
+
+            .legend-item {
+                gap: 0.35rem;
+            }
+
+            .life-weeks-container .card {
+                padding: 1rem;
+            }
+
+            .life-weeks-container .card .flex.justify-between {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .user-switch-bar {
+                left: 1rem;
+                right: 1rem;
+                transform: none;
+                justify-content: center;
+                bottom: 1rem;
+            }
+        }
+
+        /* ========== RESPONSIVE — MOBILE (≤ 480px) ========== */
+        @media (max-width: 480px) {
+            .life-weeks-container {
+                padding: 0.75rem;
+                padding-bottom: 4.5rem;
+            }
+
+            .life-weeks-container header h1 {
+                font-size: 1.25rem;
+            }
+
+            .life-weeks-container header .flex.gap-4 {
+                gap: 0.5rem;
+            }
+
+            .life-weeks-container header .btn {
+                padding: 0.35rem 0.6rem;
+                font-size: 0.75rem;
+            }
+
+            .legend {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem 1rem;
+                padding: 0.75rem 1rem;
+                border-radius: 0.75rem;
+            }
+
+            .legend-dot {
+                width: 10px;
+                height: 10px;
+            }
+
+            .legend-item span {
+                font-size: 0.7rem;
+            }
+
+            .life-weeks-container .card h2 {
+                font-size: 1.15rem;
+            }
+
+            .life-weeks-container .card .text-sm {
+                font-size: 0.7rem;
+            }
+
+            .life-weeks-container .card .btn {
+                font-size: 0.65rem;
+                padding: 0.2rem 0.5rem;
+            }
+
+            .user-switch-bar {
+                gap: 0.25rem;
+                padding: 0.35rem;
+            }
+
+            .switch-btn {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            /* Modal */
+            .modal-content {
+                padding: 1.25rem;
+                width: 95%;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="life-weeks-container">
-        <header class="flex justify-between items-center" style="margin-bottom: 2rem;">
-            <h1 style="font-size: 2rem; font-weight: bold;">Life in Weeks</h1>
-            <a href="index.html" class="btn btn-surface">Dashboard</a>
-        </header>
+        <div class="page-header-container" style="margin-top: 2rem;">
+            <h1 class="page-header">Life in Weeks</h1>
+            <div class="header-actions">
+                <a href="timetable.html" class="btn btn-surface">Timetable</a>
+                <a href="index.html" class="btn btn-primary">Dashboard</a>
+            </div>
+        </div>
 
         <div class="legend">
             <div class="legend-item">
@@ -228,9 +345,10 @@
     </div>
 
     <script src="logic.js"></script>
+    <script src="auth.js"></script>
     <script>
         let currentUserIndex = 0;
-        const appData = StorageManager.load();
+        let appData = null;  // populated async on load
         const COLS = 52;
         const TOTAL_WEEKS = 80 * 52; // 4160 weeks
         const ROWS = 80;
@@ -288,6 +406,9 @@
             }
 
             // Build DOM (minimal — just card + canvas)
+            const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+            const isOwner = (user.name === loggedInUser);
+
             container.innerHTML = `
                 <div class="card">
                     <div class="flex justify-between items-center" style="margin-bottom: 1rem;">
@@ -297,9 +418,9 @@
                                 <span style="color: var(--accent);">${lifeWeeks.lived}</span> weeks lived •
                                 <span style="color: var(--text-muted);">${lifeWeeks.remaining}</span> remaining
                             </div>
-                            <button class="btn btn-surface" onclick="openTimelineModal(${currentUserIndex})" style="font-size: 0.75rem; padding: 0.25rem 0.75rem;">
+                            ${isOwner ? `<button class="btn btn-surface" onclick="openTimelineModal(${currentUserIndex})" style="font-size: 0.75rem; padding: 0.25rem 0.75rem;">
                                 Edit Timeline
-                            </button>
+                            </button>` : ''}
                         </div>
                     </div>
                     <div class="week-canvas-wrap">
@@ -473,9 +594,14 @@
             editingUserIndex = -1;
         }
 
-        function saveTimeline() {
+        async function saveTimeline() {
             if (editingUserIndex === -1) return;
             const user = appData.users[editingUserIndex];
+
+            // Ownership check
+            const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+            if (user.name !== loggedInUser) return;
+
             user.dob = document.getElementById('dob-input').value;
             user.collegeStartDate = document.getElementById('college-start-input').value;
             user.gapYears = parseInt(document.getElementById('gap-years-input').value) || 0;
@@ -486,7 +612,7 @@
                 user.age = Math.floor((now - birthDate) / (1000 * 60 * 60 * 24 * 365.25));
             }
 
-            StorageManager.save(appData);
+            await StorageManager.save(appData);
             renderLifeWeeks();
             closeTimelineModal();
         }
@@ -498,7 +624,10 @@
         // ========================================
         // BOOT
         // ========================================
-        document.addEventListener('DOMContentLoaded', () => renderLifeWeeks());
+        document.addEventListener('DOMContentLoaded', async () => {
+            appData = await StorageManager.load();
+            renderLifeWeeks();
+        });
     </script>
 </body>
 

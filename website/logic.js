@@ -1,44 +1,13 @@
-// Storage Manager
+// ═══════════════════════════════════════════════════════════════
+// Storage Manager  –– MongoDB-backed with localStorage fallback
+// ═══════════════════════════════════════════════════════════════
 const StorageManager = {
     STORAGE_KEY: 'protocol_data',
-    DATA_VERSION: 3, // Bump this when default users or schema change
+    MIGRATED_KEY: 'protocol_migrated_to_mongo',
+    DATA_VERSION: 3,
+    API_BASE: '/api',          // relative URL – works when served by the backend
 
-    load() {
-        const data = localStorage.getItem(this.STORAGE_KEY);
-        if (!data) return this.getDefaultData();
-
-        const parsed = JSON.parse(data);
-
-        // Auto-migrate: add any missing users and fields from defaults
-        if (!parsed._version || parsed._version < this.DATA_VERSION) {
-            const defaults = this.getDefaultData();
-            const existingNames = parsed.users.map(u => u.name);
-
-            // Add missing users
-            defaults.users.forEach(defaultUser => {
-                if (!existingNames.includes(defaultUser.name)) {
-                    parsed.users.push(defaultUser);
-                }
-            });
-
-            // Patch existing users with new fields
-            parsed.users.forEach(user => {
-                if (!user.checkIns) user.checkIns = {};
-                if (user.isWeekLocked === undefined) user.isWeekLocked = false;
-                if (!user.weekPlan) user.weekPlan = null;
-            });
-
-            parsed._version = this.DATA_VERSION;
-            this.save(parsed);
-        }
-
-        return parsed;
-    },
-
-    save(data) {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
-    },
-
+    // ── Default seed data ──────────────────────────────────────
     getDefaultData() {
         return {
             _version: this.DATA_VERSION,
@@ -55,13 +24,7 @@ const StorageManager = {
                     checkIns: {},
                     isWeekLocked: false,
                     weekPlan: null,
-                    timetable: {
-                        'Monday-9 AM': { name: 'Deep Work', type: 'work' },
-                        'Monday-11 AM': { name: 'Team Sync', type: 'work' },
-                        'Monday-5 PM': { name: 'Gym', type: 'gym' },
-                        'Tuesday-9 AM': { name: 'Code Review', type: 'work' },
-                        'Tuesday-6 PM': { name: 'Running', type: 'gym' }
-                    }
+                    timetable: {}
                 },
                 {
                     name: 'Piyush',
@@ -75,11 +38,7 @@ const StorageManager = {
                     checkIns: {},
                     isWeekLocked: false,
                     weekPlan: null,
-                    timetable: {
-                        'Monday-10 AM': { name: 'Vocal Warmup', type: 'work' },
-                        'Monday-2 PM': { name: 'Recording', type: 'work' },
-                        'Monday-9 PM': { name: 'Chill Stream', type: 'fun' }
-                    }
+                    timetable: {}
                 },
                 {
                     name: 'Dhritiman',
@@ -93,11 +52,7 @@ const StorageManager = {
                     checkIns: {},
                     isWeekLocked: false,
                     weekPlan: null,
-                    timetable: {
-                        'Monday-8 AM': { name: 'Morning Pages', type: 'work' },
-                        'Monday-1 PM': { name: 'Editing', type: 'work' },
-                        'Monday-10 PM': { name: 'Reading', type: 'sleep' }
-                    }
+                    timetable: {}
                 },
                 {
                     name: 'Kallul',
@@ -111,11 +66,7 @@ const StorageManager = {
                     checkIns: {},
                     isWeekLocked: false,
                     weekPlan: null,
-                    timetable: {
-                        'Monday-10 AM': { name: 'Strategy Session', type: 'work' },
-                        'Monday-3 PM': { name: 'Practice Rounds', type: 'fun' },
-                        'Monday-7 PM': { name: 'Gym', type: 'gym' }
-                    }
+                    timetable: {}
                 },
                 {
                     name: 'Hirak',
@@ -129,11 +80,7 @@ const StorageManager = {
                     checkIns: {},
                     isWeekLocked: false,
                     weekPlan: null,
-                    timetable: {
-                        'Monday-9 AM': { name: 'Sketch Session', type: 'work' },
-                        'Monday-2 PM': { name: 'Digital Art', type: 'work' },
-                        'Monday-8 PM': { name: 'Portfolio Review', type: 'work' }
-                    }
+                    timetable: {}
                 }
             ],
             votes: [],
@@ -141,9 +88,112 @@ const StorageManager = {
         };
     },
 
-    reset() {
+    // ── Schema migration helper (applied after load) ───────────
+    _migrate(data) {
+        if (!data._version || data._version < this.DATA_VERSION) {
+            const defaults = this.getDefaultData();
+            const existingNames = data.users.map(u => u.name);
+            defaults.users.forEach(du => {
+                if (!existingNames.includes(du.name)) data.users.push(du);
+            });
+            data.users.forEach(u => {
+                if (!u.checkIns) u.checkIns = {};
+                if (u.isWeekLocked === undefined) u.isWeekLocked = false;
+                if (!u.weekPlan) u.weekPlan = null;
+            });
+            data._version = this.DATA_VERSION;
+        }
+        return data;
+    },
+
+    // ── Load from backend; fall back to localStorage ───────────
+    async load() {
+        try {
+            // First check if we need to migrate localStorage → MongoDB
+            await this._maybeUploadLocalData();
+
+            const res = await fetch(`${this.API_BASE}/data`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            if (!data || !data.users) throw new Error('Invalid payload');
+            const migrated = this._migrate(data);
+            pruneOldCheckIns(migrated);
+            updateStreaks(migrated);
+            return migrated;
+        } catch (err) {
+            console.warn('[StorageManager] Backend unavailable, using localStorage:', err.message);
+            const local = this._loadLocal();
+            pruneOldCheckIns(local);
+            updateStreaks(local);
+            return local;
+        }
+    },
+
+    // ── Save to backend; also keep localStorage in sync ────────
+    async save(data) {
+        // Always keep localStorage in sync as a fallback cache
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+
+        let headers = { 'Content-Type': 'application/json' };
+        if (typeof AuthManager !== 'undefined' && AuthManager.isLoggedIn()) {
+            headers['x-user-name'] = AuthManager.getCurrentUser();
+        }
+
+        try {
+            const res = await fetch(`${this.API_BASE}/data`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } catch (err) {
+            console.warn('[StorageManager] Save to backend failed (kept in localStorage):', err.message);
+        }
+    },
+
+    // ── Reset (dev utility) ────────────────────────────────────
+    async reset() {
         localStorage.removeItem(this.STORAGE_KEY);
+        localStorage.removeItem(this.MIGRATED_KEY);
+        try {
+            await fetch(`${this.API_BASE}/data`, { method: 'DELETE' });
+        } catch (_) { }
         return this.getDefaultData();
+    },
+
+    // ── Internal: localStorage fallback ───────────────────────
+    _loadLocal() {
+        const raw = localStorage.getItem(this.STORAGE_KEY);
+        const data = raw ? JSON.parse(raw) : this.getDefaultData();
+        return this._migrate(data);
+    },
+
+    // ── One-time migration: push localStorage → MongoDB ───────
+    async _maybeUploadLocalData() {
+        if (localStorage.getItem(this.MIGRATED_KEY)) return; // already done
+        const raw = localStorage.getItem(this.STORAGE_KEY);
+        if (!raw) { localStorage.setItem(this.MIGRATED_KEY, '1'); return; }
+
+        try {
+            // Only upload if backend has no data yet
+            const check = await fetch(`${this.API_BASE}/data`);
+            if (!check.ok) return;
+            const existing = await check.json();
+
+            if (!existing.users || existing.users.length === 0) {
+                console.log('[StorageManager] Migrating localStorage data to MongoDB…');
+                const local = JSON.parse(raw);
+                await fetch(`${this.API_BASE}/data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(local)
+                });
+            }
+            localStorage.setItem(this.MIGRATED_KEY, '1');
+            console.log('[StorageManager] Migration complete.');
+        } catch (err) {
+            console.warn('[StorageManager] Migration skipped:', err.message);
+        }
     }
 };
 
@@ -155,18 +205,30 @@ function calculateMomentum(completionRate, streak) {
 }
 
 function calculateTeamMomentum(users) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const DAYS_LIST = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const todayName = DAYS_LIST[new Date().getDay()];
+
     let totalTasks = 0;
-    let totalCompleted = 0;
+    let totalChecked = 0;
     let avgStreak = 0;
 
     users.forEach(user => {
-        totalTasks += user.tasks.length;
-        totalCompleted += user.tasks.filter(t => t.completed).length;
+        // Count today's tasks and check-ins from the timetable
+        Object.keys(user.timetable || {}).forEach(key => {
+            const hyphenIdx = key.indexOf('-');
+            if (key.substring(0, hyphenIdx) === todayName) {
+                totalTasks++;
+                if (user.checkIns && user.checkIns[todayStr] && user.checkIns[todayStr][key]) {
+                    totalChecked++;
+                }
+            }
+        });
         avgStreak += user.streak;
     });
 
-    avgStreak = avgStreak / users.length;
-    const completionRate = totalTasks > 0 ? (totalCompleted / totalTasks) * 100 : 0;
+    avgStreak = users.length > 0 ? avgStreak / users.length : 0;
+    const completionRate = totalTasks > 0 ? (totalChecked / totalTasks) * 100 : 0;
 
     return calculateMomentum(completionRate, avgStreak);
 }
@@ -179,6 +241,73 @@ function generateRoast(userName) {
         `Alert: ${userName} missed a checkpoint. Shame mode activated.`
     ];
     return roasts[Math.floor(Math.random() * roasts.length)];
+}
+
+// ── Streak Calculator ──────────────────────────────────────────
+// Updates user.streak based on consecutive days with ≥1 check-in
+function updateStreaks(data) {
+    const DAYS_LIST = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    data.users.forEach(user => {
+        if (!user.timetable || !user.checkIns) {
+            user.streak = 0;
+            return;
+        }
+
+        let streak = 0;
+        const today = new Date();
+
+        // Walk backwards from yesterday (today is still in progress)
+        for (let d = 1; d <= 365; d++) {
+            const date = new Date(today);
+            date.setDate(today.getDate() - d);
+            const dateStr = date.toISOString().split('T')[0];
+            const dayName = DAYS_LIST[date.getDay()];
+
+            // Count how many tasks were scheduled for that day
+            let totalTasks = 0;
+            Object.keys(user.timetable).forEach(key => {
+                const hyphenIdx = key.indexOf('-');
+                const keyDay = key.substring(0, hyphenIdx);
+                if (keyDay === dayName) totalTasks++;
+            });
+
+            if (totalTasks === 0) continue; // No tasks = skip (don't break streak)
+
+            // Count how many were checked in
+            const dayCheckIns = user.checkIns[dateStr] || {};
+            let checked = 0;
+            Object.keys(user.timetable).forEach(key => {
+                const hyphenIdx = key.indexOf('-');
+                const keyDay = key.substring(0, hyphenIdx);
+                if (keyDay === dayName && dayCheckIns[key]) checked++;
+            });
+
+            if (checked > 0) {
+                streak++;
+            } else {
+                break; // Streak broken
+            }
+        }
+
+        user.streak = streak;
+    });
+}
+
+// ── CheckIns Pruner ────────────────────────────────────────────
+// Remove check-in entries older than maxDays (default 60)
+function pruneOldCheckIns(data, maxDays = 60) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - maxDays);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+
+    data.users.forEach(user => {
+        if (!user.checkIns) return;
+        Object.keys(user.checkIns).forEach(dateStr => {
+            if (dateStr < cutoffStr) {
+                delete user.checkIns[dateStr];
+            }
+        });
+    });
 }
 
 // Scheduler Logic
@@ -228,7 +357,9 @@ function getNextTasks(user, limit = 3) {
 
     // Parse timetable keys
     Object.keys(user.timetable).forEach(key => {
-        const [day, timeStr] = key.split('-');
+        const hyphenIdx = key.indexOf('-');
+        const day = key.substring(0, hyphenIdx);
+        const timeStr = key.substring(hyphenIdx + 1);
         if (day !== currentDay) return;
 
         // Convert timeStr (e.g., "9 AM", "12 PM") to 24h number
@@ -239,18 +370,16 @@ function getNextTasks(user, limit = 3) {
         if (period === 'PM' && hour !== 12) hour += 12;
         if (period === 'AM' && hour === 12) hour = 0;
 
-        if (hour >= currentHour) {
-            let taskData = user.timetable[key];
-            let name = typeof taskData === 'string' ? taskData : taskData.name;
-            let type = typeof taskData === 'string' ? 'other' : taskData.type;
+        let taskData = user.timetable[key];
+        let name = typeof taskData === 'string' ? taskData : taskData.name;
+        let type = typeof taskData === 'string' ? 'other' : taskData.type;
 
-            tasks.push({
-                time: timeStr,
-                hour24: hour, // for sorting
-                name: name,
-                type: type
-            });
-        }
+        tasks.push({
+            time: timeStr,
+            hour24: hour, // for sorting
+            name: name,
+            type: type
+        });
     });
 
     // Sort by time and take top 'limit'

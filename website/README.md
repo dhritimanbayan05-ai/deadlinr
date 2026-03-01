@@ -1,4 +1,4 @@
-# The Protocol - Static Website
+# Deadlinr - Static Website
 
 A simple, zero-dependency to-do list with gamification for **Prayash (Coder OP)**, **Piyush (Singer OP)**, and **Dhritiman (Writer OP)**.
 

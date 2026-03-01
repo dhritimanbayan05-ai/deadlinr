@@ -30,66 +30,62 @@ const AuthManager = {
     // Check if user is logged in
     isLoggedIn() {
         return this.getCurrentUser() !== null;
+    },
+
+    // Redirect logic
+    enforceAuth() {
+        const isLoginPage = window.location.pathname.endsWith('login.html');
+        if (!this.isLoggedIn() && !isLoginPage) {
+            window.location.replace('login.html');
+        } else if (this.isLoggedIn() && isLoginPage) {
+            window.location.replace('index.html');
+        }
     }
 };
 
-// Login Modal Controller
-let loginModal = null;
-
-function showLoginModal() {
-    loginModal = document.getElementById('login-modal');
-    if (loginModal) {
-        loginModal.classList.add('open');
-    }
-}
-
-function hideLoginModal() {
-    if (loginModal) {
-        loginModal.classList.remove('open');
-    }
-}
+// Enforce auth immediately
+AuthManager.enforceAuth();
 
 function selectUser(userName) {
-    // Set the user in auth
     AuthManager.setCurrentUser(userName);
-
-    // Hide modal
-    hideLoginModal();
-
-    // Reload page to refresh with logged-in user
-    window.location.reload();
+    window.location.href = 'index.html';
 }
 
 function handleLogout() {
     if (confirm('Are you sure you want to sign out?')) {
         AuthManager.logout();
-        window.location.reload();
+        window.location.href = 'login.html';
     }
 }
 
-function initLoginModal() {
-    // Get all users from storage
-    const appData = StorageManager.load();
-    const modalContainer = document.getElementById('user-cards-container');
+async function initLoginPage() {
+    const isLoginPage = window.location.pathname.endsWith('login.html');
+    if (!isLoginPage) return;
 
-    if (modalContainer) {
-        modalContainer.innerHTML = appData.users.map(user => `
-      <div class="user-card" onclick="selectUser('${user.name}')">
-        <div class="user-card-indicator"></div>
-        <div class="user-card-name">${user.name}</div>
-        <div class="user-card-role">${user.role}</div>
-      </div>
-    `).join('');
-    }
+    // Wait for AppData to load if StorageManager is available
+    if (typeof StorageManager !== 'undefined') {
+        const appData = await StorageManager.load();
+        const container = document.getElementById('user-cards-container');
 
-    // Close modal when clicking outside
-    const modal = document.getElementById('login-modal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                hideLoginModal();
-            }
-        });
+        if (container && appData && appData.users) {
+            container.innerHTML = appData.users.map(user => {
+                const safeName = user.name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+                return `
+                <div class="user-pill" style="margin-bottom: 0.5rem; justify-content: center; text-align: center; cursor: pointer; padding: 1rem; border: 1px solid var(--border);" data-user="${safeName}">
+                    <div style="font-size: 1.2rem; font-weight: bold;">${safeName}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${user.role}</div>
+                </div>
+            `;
+            }).join('');
+
+            // Use event delegation instead of inline onclick
+            container.addEventListener('click', (e) => {
+                const card = e.target.closest('[data-user]');
+                if (card) selectUser(card.dataset.user);
+            });
+        } else if (container) {
+            container.innerHTML = '<div style="color: var(--text-muted); text-align: center;">No users found.</div>';
+        }
     }
 }
 
@@ -99,21 +95,20 @@ function updateCheckInButton() {
 
     if (AuthManager.isLoggedIn()) {
         const currentUser = AuthManager.getCurrentUser();
+        // checkInBtn.textContent = \`Sign Out (\${currentUser})\`;
         checkInBtn.textContent = 'Sign Out';
         checkInBtn.onclick = handleLogout;
-    } else {
-        checkInBtn.textContent = 'Check In';
-        checkInBtn.onclick = showLoginModal;
+        checkInBtn.style.background = 'var(--surface)';
+        checkInBtn.style.color = 'var(--text)';
+        checkInBtn.style.border = '1px solid var(--border)';
     }
 }
 
-// Initialize auth system on page load
-function initAuth() {
-    initLoginModal();
+async function initAuth() {
+    await initLoginPage();
     updateCheckInButton();
 }
 
-// Auto-run on DOM ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAuth);
 } else {

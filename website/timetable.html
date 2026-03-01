@@ -4,10 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Timetable - The Protocol</title>
+    <title>Weekly Timetable - Deadlinr</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
         /* ========== PAGE LAYOUT ========== */
@@ -26,8 +28,10 @@
 
         .tt-header-left h1 {
             font-size: 2rem;
-            font-weight: 700;
+            font-weight: 800;
+            font-family: var(--font-display);
             margin-bottom: 0.25rem;
+            color: var(--title-color);
         }
 
         .tt-header-right {
@@ -82,8 +86,9 @@
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: var(--text-muted);
-            font-weight: 600;
+            color: var(--accent);
+            font-weight: 700;
+            font-family: var(--font-display);
         }
 
         .weekly-line-stats {
@@ -185,7 +190,99 @@
 
         .day-header.today-col {
             color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+            border-bottom: 2px solid #10b981;
+            position: relative;
+        }
+
+        .day-header.today-col::after {
+            content: '▼';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.5rem;
+            color: #10b981;
+            z-index: 5;
+        }
+
+        /* Today column cells */
+        .task-cell.today-cell {
+            border-left: 2px solid rgba(16, 185, 129, 0.35);
+            background-color: rgba(16, 185, 129, 0.03);
+        }
+
+        /* Current hour row indicator — purple glow as continuous band */
+        .task-cell.current-hour-row {
+            position: relative;
+            background-color: rgba(168, 85, 247, 0.08) !important;
+            box-shadow: inset 0 0 12px rgba(168, 85, 247, 0.12);
+            animation: purplePulse 2s ease-in-out infinite;
+            z-index: 4;
+        }
+
+        .time-cell.current-hour-time {
+            background-color: rgba(168, 85, 247, 0.12) !important;
+            box-shadow: inset 0 0 12px rgba(168, 85, 247, 0.12);
+            animation: purplePulse 2s ease-in-out infinite;
+        }
+
+        @keyframes purplePulse {
+
+            0%,
+            100% {
+                background-color: rgba(168, 85, 247, 0.06);
+            }
+
+            50% {
+                background-color: rgba(168, 85, 247, 0.14);
+            }
+        }
+
+        .time-cell.current-hour-time {
+            color: #10b981;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .time-cell.current-hour-time::after {
+            content: '◀';
+            position: absolute;
+            right: 2px;
+            font-size: 0.5rem;
+            color: #10b981;
+        }
+
+        @keyframes pulseGlow {
+
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* Countdown badge */
+        .countdown-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.75rem;
             background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            border-radius: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: #10b981;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+        }
+
+        .countdown-badge .countdown-icon {
+            font-size: 0.85rem;
         }
 
         .time-cell {
@@ -229,6 +326,8 @@
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
             line-height: 1.3;
             transition: all 0.3s;
+            pointer-events: none;
+            /* Let clicks pass through to the cell/button */
         }
 
         .task-work {
@@ -268,7 +367,8 @@
             justify-content: center;
             font-size: 0.55rem;
             transition: all 0.25s;
-            z-index: 5;
+            z-index: 10;
+            pointer-events: auto;
         }
 
         .checkin-btn:hover {
@@ -315,9 +415,10 @@
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: var(--text-muted);
+            color: var(--accent);
             margin-bottom: 1rem;
-            font-weight: 600;
+            font-weight: 700;
+            font-family: var(--font-display);
         }
 
         .daily-bars-row {
@@ -415,9 +516,10 @@
             font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: var(--text-muted);
+            color: var(--accent);
             margin-bottom: 0.75rem;
-            font-weight: 600;
+            font-weight: 700;
+            font-family: var(--font-display);
         }
 
         /* Today's progress ring */
@@ -641,6 +743,226 @@
                 align-items: flex-start;
                 gap: 1rem;
             }
+
+            .tt-header-right {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .lock-section {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.75rem;
+            }
+
+            .weekly-line-stats {
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tt-page {
+                padding: 1rem;
+            }
+
+            .tt-header-left h1 {
+                font-size: 1.5rem;
+            }
+
+            /* Make timetable grid horizontally scrollable */
+            .timetable-grid {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                min-width: 600px;
+            }
+
+            /* Wrap timetable in scrollable container */
+            #timetable {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .time-cell,
+            .day-header,
+            .task-cell {
+                min-height: 48px;
+                font-size: 0.6rem;
+                padding: 0.25rem;
+            }
+
+            .task-content {
+                font-size: 0.55rem;
+                padding: 0.15rem 0.2rem;
+            }
+
+            .checkin-btn {
+                width: 16px;
+                height: 16px;
+                font-size: 0.45rem;
+            }
+
+            .weekly-line-section {
+                padding: 1rem;
+            }
+
+            .weekly-line-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .line-chart-container {
+                height: 80px;
+            }
+
+            .daily-progress-card,
+            .habit-card {
+                padding: 1rem;
+            }
+
+            .daily-bar-track {
+                height: 60px;
+            }
+
+            .lock-info {
+                font-size: 0.8rem;
+            }
+
+            .btn-lock {
+                padding: 0.6rem 1.5rem;
+                font-size: 0.8rem;
+                width: 100%;
+            }
+
+            .countdown-badge {
+                font-size: 0.65rem;
+                padding: 0.25rem 0.5rem;
+            }
+
+            .week-status {
+                font-size: 0.7rem;
+                padding: 0.4rem 1rem;
+            }
+
+            /* Modal on mobile */
+            .modal-content {
+                width: 95%;
+                padding: 1.25rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tt-page {
+                padding: 0.75rem;
+            }
+
+            .tt-header-left h1 {
+                font-size: 1.25rem;
+            }
+
+            .tt-header-left p {
+                font-size: 0.75rem;
+            }
+
+            .tt-header-right {
+                gap: 0.5rem;
+            }
+
+            .tt-header-right .btn {
+                padding: 0.35rem 0.6rem;
+                font-size: 0.75rem;
+            }
+
+            .tt-header-right select {
+                padding: 0.35rem 0.5rem;
+                font-size: 0.75rem;
+            }
+
+            /* Grid becomes a scrollable strip */
+            .timetable-grid {
+                grid-template-columns: 50px repeat(7, 1fr);
+                min-width: 520px;
+            }
+
+            .time-cell {
+                font-size: 0.55rem;
+                padding: 0.15rem;
+            }
+
+            .day-header {
+                font-size: 0.6rem;
+                min-height: 36px;
+            }
+
+            .task-cell {
+                min-height: 40px;
+            }
+
+            .task-content {
+                font-size: 0.5rem;
+            }
+
+            .weekly-line-section {
+                padding: 0.75rem;
+                border-radius: 0.75rem;
+            }
+
+            .wl-stat-value {
+                font-size: 1rem;
+            }
+
+            .wl-stat-label {
+                font-size: 0.5rem;
+            }
+
+            .daily-bar-track {
+                height: 50px;
+            }
+
+            .daily-bar-rate {
+                font-size: 0.6rem;
+            }
+
+            .daily-bar-label {
+                font-size: 0.5rem;
+            }
+
+            .daily-bar-margin {
+                font-size: 0.45rem;
+            }
+
+            .daily-progress-title,
+            .habit-card-title {
+                font-size: 0.6rem;
+            }
+
+            .progress-ring-container {
+                width: 44px;
+                height: 44px;
+            }
+
+            .progress-ring-text {
+                font-size: 0.65rem;
+            }
+
+            .today-stats .stat-line {
+                font-size: 0.7rem;
+            }
+
+            .month-week-label {
+                font-size: 0.5rem;
+                width: 40px;
+            }
+
+            .month-week-count {
+                font-size: 0.55rem;
+                width: 55px;
+            }
+
+            .lock-section {
+                padding: 1rem;
+                border-radius: 0.75rem;
+            }
         }
     </style>
 </head>
@@ -648,27 +970,35 @@
 <body>
     <div class="tt-page">
         <!-- Header -->
-        <header class="tt-header">
-            <div class="tt-header-left">
-                <h1>Weekly Timetable</h1>
-                <p class="text-muted text-sm">Plan your protocol. Own your time.</p>
-            </div>
-            <div class="tt-header-right">
+        <div class="page-header-container" style="margin-top: 2rem;">
+            <h1 class="page-header">Weekly Timetable</h1>
+            <p class="text-muted text-sm tracking-widest text-center"
+                style="margin-top: 0.5rem; text-transform: uppercase; font-family: var(--font-display);">Plan your
+                protocol. Own your time.</p>
+
+            <div class="header-actions">
+                <div class="countdown-badge" id="day-countdown">
+                    <span class="countdown-icon">⏱</span>
+                    <span id="countdown-text">--:--:--</span>
+                </div>
                 <div class="week-status planning" id="week-status-badge">
                     <span id="week-status-text">Planning Mode</span>
                 </div>
                 <select id="user-select" class="btn btn-surface" onchange="onUserSwitch()">
                 </select>
+                <a href="lifeweeks.html" class="btn btn-surface">Life Weeks</a>
                 <a href="index.html" class="btn btn-primary">Dashboard</a>
             </div>
-        </header>
+        </div>
 
         <!-- Weekly Line Graph (TOP) -->
         <div class="weekly-line-section" id="weekly-line-section">
         </div>
 
-        <!-- Timetable Grid -->
-        <div class="timetable-grid" id="timetable">
+        <!-- Timetable Grid (scrollable on mobile) -->
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 0.75rem;">
+            <div class="timetable-grid" id="timetable">
+            </div>
         </div>
 
         <!-- Lock Week Section -->
@@ -715,205 +1045,231 @@
                 <button class="btn btn-primary" onclick="saveTask()">Save</button>
             </div>
         </div>
-    </div>
 
-    <script src="logic.js"></script>
-    <script>
-        // ========================================
-        // CONSTANTS & STATE
-        // ========================================
-        const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-        const HOURS = ['6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', '8 PM', '9 PM', '10 PM', '11 PM'];
+        <script src="logic.js"></script>
+        <script src="auth.js"></script>
+        <script>
+            // ========================================
+            // CONSTANTS & STATE
+            // ========================================
+            const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const HOURS = ['6 AM', '7 AM', '8 AM', '9 AM', '10 AM', '11 AM', '12 PM', '1 PM', '2 PM', '3 PM', '4 PM', '5 PM', '6 PM', '7 PM', '8 PM', '9 PM', '10 PM', '11 PM'];
 
-        let currentKey = null;
-        let currentUser = null;
-        let appData = null;
+            let currentKey = null;
+            let currentUser = null;
+            let appData = null;
 
-        // ========================================
-        // INITIALIZATION
-        // ========================================
-        function init() {
-            appData = StorageManager.load();
-            const select = document.getElementById('user-select');
-            select.innerHTML = appData.users.map(u => `<option value="${u.name}">${u.name} (${u.role})</option>`).join('');
+            // ========================================
+            // INITIALIZATION
+            // ========================================
+            async function init() {
+                appData = await StorageManager.load();
+                const select = document.getElementById('user-select');
+                select.innerHTML = appData.users.map(u => `<option value="${u.name}">${u.name} (${u.role})</option>`).join('');
 
-            autoUnlockIfNewWeek();
-            renderAll();
-        }
-
-        function onUserSwitch() {
-            appData = StorageManager.load();
-            renderAll();
-        }
-
-        function renderAll() {
-            const userName = document.getElementById('user-select').value;
-            const user = appData.users.find(u => u.name === userName);
-            currentUser = user;
-
-            if (!user.timetable) user.timetable = {};
-            if (!user.checkIns) user.checkIns = {};
-
-            renderWeekStatus();
-            renderWeeklyLineGraph();
-            renderTimetable();
-            renderLockSection();
-            renderDailyProgress();
-            renderHabitCard();
-        }
-
-        // ========================================
-        // WEEK LOCK LOGIC
-        // ========================================
-        function autoUnlockIfNewWeek() {
-            const currentWeekStart = getWeekStartStr();
-            appData.users.forEach(user => {
-                if (user.isWeekLocked && user.weekPlan) {
-                    if (user.weekPlan.lockedWeekStart !== currentWeekStart) {
-                        user.isWeekLocked = false;
-                        user.weekPlan = null;
-                    }
+                if (typeof AuthManager !== 'undefined' && AuthManager.isLoggedIn()) {
+                    select.value = AuthManager.getCurrentUser();
                 }
-            });
-            StorageManager.save(appData);
-        }
 
-        function lockWeek() {
-            if (!currentUser) return;
-            const taskCount = Object.keys(currentUser.timetable || {}).length;
-            if (taskCount === 0) return; // Need at least one task
-
-            currentUser.weekPlan = {
-                lockedDate: new Date().toISOString(),
-                lockedWeekStart: getWeekStartStr(),
-                tasks: JSON.parse(JSON.stringify(currentUser.timetable))
-            };
-            currentUser.isWeekLocked = true;
-            StorageManager.save(appData);
-            renderAll();
-        }
-
-        function unlockWeek() {
-            if (!currentUser) return;
-            currentUser.isWeekLocked = false;
-            currentUser.weekPlan = null;
-            StorageManager.save(appData);
-            renderAll();
-        }
-
-        function renderWeekStatus() {
-            const badge = document.getElementById('week-status-badge');
-            const text = document.getElementById('week-status-text');
-            if (currentUser && currentUser.isWeekLocked) {
-                badge.className = 'week-status locked';
-                text.textContent = 'Week Locked';
-            } else {
-                badge.className = 'week-status planning';
-                text.textContent = 'Planning Mode';
+                autoUnlockIfNewWeek();
+                renderAll();
             }
-        }
 
-        function renderLockSection() {
-            const section = document.getElementById('lock-section');
-            if (currentUser && currentUser.isWeekLocked) {
-                const lockDate = currentUser.weekPlan ? new Date(currentUser.weekPlan.lockedDate).toLocaleDateString() : '--';
-                section.innerHTML = `
+            async function onUserSwitch() {
+                appData = await StorageManager.load();
+                renderAll();
+            }
+
+            function renderAll() {
+                const userName = document.getElementById('user-select').value;
+                const user = appData.users.find(u => u.name === userName);
+                currentUser = user;
+
+                if (!user.timetable) user.timetable = {};
+                if (!user.checkIns) user.checkIns = {};
+
+                renderWeekStatus();
+                renderWeeklyLineGraph();
+                renderTimetable();
+                renderLockSection();
+                renderDailyProgress();
+                renderHabitCard();
+            }
+
+            // ========================================
+            // WEEK LOCK LOGIC
+            // ========================================
+            function autoUnlockIfNewWeek() {
+                const currentWeekStart = getWeekStartStr();
+                let changed = false;
+                appData.users.forEach(user => {
+                    if (user.isWeekLocked && user.weekPlan) {
+                        if (user.weekPlan.lockedWeekStart !== currentWeekStart) {
+                            user.isWeekLocked = false;
+                            user.weekPlan = null;
+                            changed = true;
+                        }
+                    }
+                });
+                if (changed) {
+                    // On new week: update streaks and prune old check-ins
+                    updateStreaks(appData);
+                    pruneOldCheckIns(appData);
+                }
+                StorageManager.save(appData);
+            }
+
+            function lockWeek() {
+                if (!currentUser) return;
+                const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+                if (currentUser.name !== loggedInUser) return;
+
+                const taskCount = Object.keys(currentUser.timetable || {}).length;
+                if (taskCount === 0) return; // Need at least one task
+
+                currentUser.weekPlan = {
+                    lockedDate: new Date().toISOString(),
+                    lockedWeekStart: getWeekStartStr(),
+                    tasks: JSON.parse(JSON.stringify(currentUser.timetable))
+                };
+                currentUser.isWeekLocked = true;
+                StorageManager.save(appData);
+                renderAll();
+            }
+
+            function unlockWeek() {
+                if (!currentUser) return;
+                const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+                if (currentUser.name !== loggedInUser) return;
+
+                currentUser.isWeekLocked = false;
+                currentUser.weekPlan = null;
+                StorageManager.save(appData);
+                renderAll();
+            }
+
+            function renderWeekStatus() {
+                const badge = document.getElementById('week-status-badge');
+                const text = document.getElementById('week-status-text');
+                if (currentUser && currentUser.isWeekLocked) {
+                    badge.className = 'week-status locked';
+                    text.textContent = 'Week Locked';
+                } else {
+                    badge.className = 'week-status planning';
+                    text.textContent = 'Planning Mode';
+                }
+            }
+
+            function renderLockSection() {
+                const section = document.getElementById('lock-section');
+                const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+                const isOwner = (currentUser && currentUser.name === loggedInUser);
+
+                if (!isOwner || !currentUser) {
+                    section.style.display = 'none';
+                    return;
+                }
+                section.style.display = 'flex';
+
+                if (currentUser.isWeekLocked) {
+                    const lockDate = currentUser.weekPlan ? new Date(currentUser.weekPlan.lockedDate).toLocaleDateString() : '--';
+                    section.innerHTML = `
                     <div class="lock-info">
                         <strong>Week plan locked</strong> on ${lockDate}.
                         Check in your tasks daily. Plan unlocks automatically next Monday.
                     </div>
                     <button class="btn-lock unlock" onclick="unlockWeek()">Unlock Early</button>
                 `;
-            } else {
-                const taskCount = Object.keys(currentUser?.timetable || {}).length;
-                section.innerHTML = `
+                } else {
+                    const taskCount = Object.keys(currentUser?.timetable || {}).length;
+                    section.innerHTML = `
                     <div class="lock-info">
                         <strong>Planning mode</strong> -- Set up your week's tasks (${taskCount} scheduled),
                         then lock the plan to start checking in.
                     </div>
                     <button class="btn-lock lock" onclick="lockWeek()">Lock This Week</button>
                 `;
-            }
-        }
-
-        // ========================================
-        // WEEKLY LINE GRAPH (TOP)
-        // ========================================
-        function renderWeeklyLineGraph() {
-            const container = document.getElementById('weekly-line-section');
-            if (!currentUser) return;
-
-            const todayName = getCurrentDayName();
-            const weekDates = getWeekDates();
-            let totalChecked = 0, totalTasks = 0;
-
-            const rates = [];
-            DAYS.forEach((day, i) => {
-                const prod = getProductivityForDay(currentUser, weekDates[i], day);
-                totalChecked += prod.checked;
-                totalTasks += prod.total;
-                rates.push(prod.total > 0 ? Math.round((prod.checked / prod.total) * 100) : null);
-            });
-
-            const overallRate = totalTasks > 0 ? Math.round((totalChecked / totalTasks) * 100) : 0;
-            const streak = calculateCheckInStreak(currentUser);
-
-            // Build SVG line chart
-            const svgW = 600, svgH = 100;
-            const padX = 30, padY = 10;
-            const chartW = svgW - padX * 2;
-            const chartH = svgH - padY * 2;
-
-            // Grid lines
-            let gridLines = '';
-            for (let p = 0; p <= 100; p += 25) {
-                const y = padY + chartH - (p / 100) * chartH;
-                gridLines += `<line x1="${padX}" y1="${y}" x2="${svgW - padX}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>`;
-                if (p === 0 || p === 50 || p === 100) {
-                    gridLines += `<text x="${padX - 5}" y="${y + 3}" fill="rgba(255,255,255,0.25)" font-size="8" text-anchor="end">${p}</text>`;
                 }
             }
 
-            // Points & line
-            const points = [];
-            const validPoints = [];
-            DAYS.forEach((day, i) => {
-                const x = padX + (i / 6) * chartW;
-                const rate = rates[i];
-                if (rate !== null) {
-                    const y = padY + chartH - (rate / 100) * chartH;
-                    points.push({ x, y, rate, day, isToday: day === todayName });
-                    validPoints.push(`${x},${y}`);
+            // ========================================
+            // WEEKLY LINE GRAPH (TOP)
+            // ========================================
+            function renderWeeklyLineGraph() {
+                const container = document.getElementById('weekly-line-section');
+                if (!currentUser) return;
+
+                const todayName = getCurrentDayName();
+                const weekDates = getWeekDates();
+                let totalChecked = 0, totalTasks = 0;
+
+                const rates = [];
+                DAYS.forEach((day, i) => {
+                    const prod = getProductivityForDay(currentUser, weekDates[i], day);
+                    totalChecked += prod.checked;
+                    totalTasks += prod.total;
+                    rates.push(prod.total > 0 ? Math.round((prod.checked / prod.total) * 100) : null);
+                });
+
+                const overallRate = totalTasks > 0 ? Math.round((totalChecked / totalTasks) * 100) : 0;
+                const streak = calculateCheckInStreak(currentUser);
+
+                // Build SVG line chart
+                const svgW = 600, svgH = 100;
+                const padX = 30, padY = 10;
+                const chartW = svgW - padX * 2;
+                const chartH = svgH - padY * 2;
+
+                // Grid lines
+                let gridLines = '';
+                for (let p = 0; p <= 100; p += 25) {
+                    const y = padY + chartH - (p / 100) * chartH;
+                    gridLines += `<line x1="${padX}" y1="${y}" x2="${svgW - padX}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>`;
+                    if (p === 0 || p === 50 || p === 100) {
+                        gridLines += `<text x="${padX - 5}" y="${y + 3}" fill="rgba(255,255,255,0.25)" font-size="8" text-anchor="end">${p}</text>`;
+                    }
                 }
-            });
 
-            // Gradient area fill
-            let areaPath = '';
-            if (validPoints.length > 1) {
-                const baseY = padY + chartH;
-                areaPath = `<path d="M${validPoints[0]} ${validPoints.join(' L')} L${points[points.length - 1].x},${baseY} L${points[0].x},${baseY} Z" fill="url(#lineGrad)" opacity="0.3"/>`;
-            }
+                // Points & line
+                const points = [];
+                const validPoints = [];
+                DAYS.forEach((day, i) => {
+                    const x = padX + (i / 6) * chartW;
+                    const rate = rates[i];
+                    if (rate !== null) {
+                        const y = padY + chartH - (rate / 100) * chartH;
+                        points.push({ x, y, rate, day, isToday: day === todayName });
+                        validPoints.push(`${x},${y}`);
+                    }
+                });
 
-            const linePath = validPoints.length > 1
-                ? `<polyline points="${validPoints.join(' ')}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
-                : '';
+                // Gradient area fill
+                let areaPath = '';
+                if (validPoints.length > 1) {
+                    const baseY = padY + chartH;
+                    areaPath = `<path d="M${validPoints[0]} ${validPoints.join(' L')} L${points[points.length - 1].x},${baseY} L${points[0].x},${baseY} Z" fill="url(#lineGrad)" opacity="0.3"/>`;
+                }
 
-            let dotsHtml = '';
-            points.forEach(p => {
-                const r = p.isToday ? 5 : 3.5;
-                const glow = p.isToday ? `<circle cx="${p.x}" cy="${p.y}" r="8" fill="rgba(16,185,129,0.2)"/>` : '';
-                dotsHtml += `${glow}<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="#10b981" stroke="#09090b" stroke-width="1.5"/>`;
-                dotsHtml += `<text x="${p.x}" y="${p.y - 10}" fill="var(--text)" font-size="9" font-weight="600" text-anchor="middle">${p.rate}%</text>`;
-            });
+                const linePath = validPoints.length > 1
+                    ? `<polyline points="${validPoints.join(' ')}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
+                    : '';
 
-            // Day labels
-            const dayLabelsHtml = DAYS.map((day, i) => {
-                const x = padX + (i / 6) * chartW;
-                const isT = day === todayName;
-                return `<text x="${x}" y="${svgH + 2}" fill="${isT ? '#10b981' : 'rgba(255,255,255,0.3)'}" font-size="9" font-weight="${isT ? '700' : '500'}" text-anchor="middle">${day.slice(0, 3)}</text>`;
-            }).join('');
+                let dotsHtml = '';
+                points.forEach(p => {
+                    const r = p.isToday ? 5 : 3.5;
+                    const glow = p.isToday ? `<circle cx="${p.x}" cy="${p.y}" r="8" fill="rgba(16,185,129,0.2)"/>` : '';
+                    dotsHtml += `${glow}<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="#10b981" stroke="#09090b" stroke-width="1.5"/>`;
+                    dotsHtml += `<text x="${p.x}" y="${p.y - 10}" fill="var(--text)" font-size="9" font-weight="600" text-anchor="middle">${p.rate}%</text>`;
+                });
 
-            container.innerHTML = `
+                // Day labels
+                const dayLabelsHtml = DAYS.map((day, i) => {
+                    const x = padX + (i / 6) * chartW;
+                    const isT = day === todayName;
+                    return `<text x="${x}" y="${svgH + 2}" fill="${isT ? '#10b981' : 'rgba(255,255,255,0.3)'}" font-size="9" font-weight="${isT ? '700' : '500'}" text-anchor="middle">${day.slice(0, 3)}</text>`;
+                }).join('');
+
+                container.innerHTML = `
                 <div class="weekly-line-header">
                     <div class="weekly-line-title">Weekly Progress</div>
                     <div class="weekly-line-stats">
@@ -941,126 +1297,138 @@
                     ${dayLabelsHtml}
                 </svg>
             `;
-        }
+            }
 
-        // ========================================
-        // TIMETABLE GRID — CHECK-IN ON ALL TASKS
-        // ========================================
-        function renderTimetable() {
-            const grid = document.getElementById('timetable');
-            grid.innerHTML = '';
-            if (!currentUser) return;
+            // ========================================
+            // TIMETABLE GRID — CHECK-IN ON ALL TASKS
+            // ========================================
+            function renderTimetable() {
+                const grid = document.getElementById('timetable');
+                grid.innerHTML = '';
+                if (!currentUser) return;
 
-            const todayName = getCurrentDayName();
-            const isLocked = currentUser.isWeekLocked;
-            const weekDates = getWeekDates();
+                const todayName = getCurrentDayName();
+                const isLocked = currentUser.isWeekLocked;
+                const weekDates = getWeekDates();
+                const currentHourStr = getCurrentHourStr();
 
-            // Header row
-            grid.appendChild(createCell('', 'time-cell'));
-            DAYS.forEach(day => {
-                const cell = createCell(day.slice(0, 3), 'day-header');
-                if (day === todayName) cell.classList.add('today-col');
-                grid.appendChild(cell);
-            });
-
-            // Time rows
-            HOURS.forEach(hour => {
-                grid.appendChild(createCell(hour, 'time-cell'));
-
-                DAYS.forEach((day, dayIdx) => {
-                    const key = `${day}-${hour}`;
-                    const taskData = currentUser.timetable[key];
-                    const dateStr = weekDates[dayIdx];
-
-                    let taskName = '';
-                    let taskType = 'other';
-
-                    if (typeof taskData === 'string') {
-                        taskName = taskData;
-                    } else if (taskData && typeof taskData === 'object') {
-                        taskName = taskData.name;
-                        taskType = taskData.type;
-                    }
-
-                    const cell = document.createElement('div');
-                    cell.className = 'task-cell';
-
-                    // Check-in status for this day
-                    const dayCheckIns = (currentUser.checkIns && currentUser.checkIns[dateStr]) || {};
-                    const isChecked = dayCheckIns[key] === true;
-
-                    if (isLocked) {
-                        cell.classList.add('locked-cell');
-                    }
-
-                    if (isChecked) {
-                        cell.classList.add('cell-checked');
-                    }
-
-                    if (taskName) {
-                        cell.innerHTML = `<div class="task-content task-${taskType}">${taskName}</div>`;
-
-                        // Show check-in button on ALL task cells always
-                        const btn = document.createElement('button');
-                        btn.className = `checkin-btn ${isChecked ? 'checked' : ''}`;
-                        btn.textContent = isChecked ? '✓' : '○';
-                        btn.onclick = (e) => {
-                            e.stopPropagation();
-                            toggleCheckIn(key, dateStr);
-                        };
-                        cell.appendChild(btn);
-                    }
-
-                    // Only allow editing if NOT locked
-                    if (!isLocked) {
-                        cell.onclick = () => openModal(key, taskName, taskType);
-                    }
-
+                // Header row
+                grid.appendChild(createCell('', 'time-cell'));
+                DAYS.forEach(day => {
+                    const cell = createCell(day.slice(0, 3), 'day-header');
+                    if (day === todayName) cell.classList.add('today-col');
                     grid.appendChild(cell);
                 });
-            });
-        }
 
-        function createCell(content, className) {
-            const cell = document.createElement('div');
-            cell.className = className;
-            cell.textContent = content;
-            return cell;
-        }
+                // Time rows
+                HOURS.forEach(hour => {
+                    const timeCell = createCell(hour, 'time-cell');
+                    if (hour === currentHourStr) timeCell.classList.add('current-hour-time');
+                    grid.appendChild(timeCell);
 
-        // ========================================
-        // CHECK-IN LOGIC
-        // ========================================
-        function toggleCheckIn(key, dateStr) {
-            if (!currentUser) return;
-            if (!currentUser.checkIns) currentUser.checkIns = {};
-            if (!currentUser.checkIns[dateStr]) currentUser.checkIns[dateStr] = {};
-            currentUser.checkIns[dateStr][key] = !currentUser.checkIns[dateStr][key];
-            StorageManager.save(appData);
-            renderAll();
-        }
 
-        // ========================================
-        // DAILY PROGRESS (BOTTOM LEFT)
-        // ========================================
-        function renderDailyProgress() {
-            const container = document.getElementById('daily-progress');
-            if (!currentUser) return;
+                    DAYS.forEach((day, dayIdx) => {
+                        const key = `${day}-${hour}`;
+                        const taskData = currentUser.timetable[key];
+                        const dateStr = weekDates[dayIdx];
 
-            const todayName = getCurrentDayName();
-            const weekDates = getWeekDates();
+                        let taskName = '';
+                        let taskType = 'other';
 
-            let barsHtml = '';
-            DAYS.forEach((day, i) => {
-                const prod = getProductivityForDay(currentUser, weekDates[i], day);
-                const rate = prod.total > 0 ? Math.round((prod.checked / prod.total) * 100) : 0;
-                const barH = prod.total > 0 ? Math.max((rate / 100) * 70, 3) : 3;
-                const isProductive = rate >= 50;
-                const isToday = day === todayName;
-                const marginClass = prod.total > 0 ? (isProductive ? 'productive' : 'neutral') : '';
-                const marginText = prod.total > 0 ? (isProductive ? 'Productive' : 'Neutral') : '';
+                        if (typeof taskData === 'string') {
+                            taskName = taskData;
+                        } else if (taskData && typeof taskData === 'object') {
+                            taskName = taskData.name;
+                            taskType = taskData.type;
+                        }
 
-                barsHtml += `
+                        const cell = document.createElement('div');
+                        cell.className = 'task-cell';
+
+                        // Today column highlight
+                        if (day === todayName) cell.classList.add('today-cell');
+
+                        // Current hour row indicator
+                        if (hour === currentHourStr) cell.classList.add('current-hour-row');
+
+                        // Check-in status for this day
+                        const dayCheckIns = (currentUser.checkIns && currentUser.checkIns[dateStr]) || {};
+                        const isChecked = dayCheckIns[key] === true;
+
+                        if (isLocked) {
+                            cell.classList.add('locked-cell');
+                        }
+
+                        if (isChecked) {
+                            cell.classList.add('cell-checked');
+                        }
+
+                        if (taskName) {
+                            cell.innerHTML = `<div class="task-content task-${taskType}">${taskName}</div>`;
+
+                            // Show check-in button on ALL task cells always
+                            const btn = document.createElement('button');
+                            btn.className = `checkin-btn ${isChecked ? 'checked' : ''}`;
+                            btn.textContent = isChecked ? '✓' : '○';
+                            btn.onclick = (e) => {
+                                e.stopPropagation();
+                                toggleCheckIn(key, dateStr);
+                            };
+                            cell.appendChild(btn);
+                        }
+
+                        // Only allow editing if NOT locked
+                        if (!isLocked) {
+                            cell.onclick = () => openModal(key, taskName, taskType);
+                        }
+
+                        grid.appendChild(cell);
+                    });
+                });
+            }
+
+            function createCell(content, className) {
+                const cell = document.createElement('div');
+                cell.className = className;
+                cell.textContent = content;
+                return cell;
+            }
+
+            // ========================================
+            // CHECK-IN LOGIC
+            // ========================================
+            function toggleCheckIn(key, dateStr) {
+                const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+                if (!currentUser || currentUser.name !== loggedInUser) return;
+
+                if (!currentUser.checkIns) currentUser.checkIns = {};
+                if (!currentUser.checkIns[dateStr]) currentUser.checkIns[dateStr] = {};
+                currentUser.checkIns[dateStr][key] = !currentUser.checkIns[dateStr][key];
+                StorageManager.save(appData);
+                renderAll();
+            }
+
+            // ========================================
+            // DAILY PROGRESS (BOTTOM LEFT)
+            // ========================================
+            function renderDailyProgress() {
+                const container = document.getElementById('daily-progress');
+                if (!currentUser) return;
+
+                const todayName = getCurrentDayName();
+                const weekDates = getWeekDates();
+
+                let barsHtml = '';
+                DAYS.forEach((day, i) => {
+                    const prod = getProductivityForDay(currentUser, weekDates[i], day);
+                    const rate = prod.total > 0 ? Math.round((prod.checked / prod.total) * 100) : 0;
+                    const barH = prod.total > 0 ? Math.max((rate / 100) * 70, 3) : 3;
+                    const isProductive = rate >= 50;
+                    const isToday = day === todayName;
+                    const marginClass = prod.total > 0 ? (isProductive ? 'productive' : 'neutral') : '';
+                    const marginText = prod.total > 0 ? (isProductive ? 'Productive' : 'Neutral') : '';
+
+                    barsHtml += `
                     <div class="daily-bar-item ${isToday ? 'today-item' : ''}">
                         <div class="daily-bar-track">
                             <div class="daily-bar-fill ${isProductive ? 'productive' : 'neutral'}" style="height: ${barH}px;"></div>
@@ -1070,51 +1438,51 @@
                         ${marginText ? `<div class="daily-bar-margin ${marginClass}">${marginText}</div>` : ''}
                     </div>
                 `;
-            });
+                });
 
-            container.innerHTML = `
+                container.innerHTML = `
                 <div class="daily-progress-title">Daily Progress</div>
                 <div class="daily-bars-row">${barsHtml}</div>
             `;
-        }
+            }
 
-        // ========================================
-        // HABIT CARD (BOTTOM RIGHT) — Today + Monthly Uncompleted
-        // ========================================
-        function renderHabitCard() {
-            const container = document.getElementById('habit-card');
-            if (!currentUser) return;
+            // ========================================
+            // HABIT CARD (BOTTOM RIGHT) — Today + Monthly Uncompleted
+            // ========================================
+            function renderHabitCard() {
+                const container = document.getElementById('habit-card');
+                if (!currentUser) return;
 
-            const todayStr = getTodayStr();
-            const todayName = getCurrentDayName();
-            const todayProd = getProductivityForDay(currentUser, todayStr, todayName);
-            const todayRate = todayProd.total > 0 ? Math.round((todayProd.checked / todayProd.total) * 100) : 0;
+                const todayStr = getTodayStr();
+                const todayName = getCurrentDayName();
+                const todayProd = getProductivityForDay(currentUser, todayStr, todayName);
+                const todayRate = todayProd.total > 0 ? Math.round((todayProd.checked / todayProd.total) * 100) : 0;
 
-            // SVG ring
-            const circumference = 2 * Math.PI * 22;
-            const offset = circumference - (todayRate / 100) * circumference;
+                // SVG ring
+                const circumference = 2 * Math.PI * 22;
+                const offset = circumference - (todayRate / 100) * circumference;
 
-            // Monthly uncompleted — get past 4 weeks
-            const weekLabels = ['This Week', 'Last Week', '2 Weeks Ago', '3 Weeks Ago'];
-            let monthlyHtml = '';
+                // Monthly uncompleted — get past 4 weeks
+                const weekLabels = ['This Week', 'Last Week', '2 Weeks Ago', '3 Weeks Ago'];
+                let monthlyHtml = '';
 
-            for (let w = 0; w < 4; w++) {
-                let weekTotal = 0, weekChecked = 0;
-                for (let d = 0; d < 7; d++) {
-                    const date = new Date();
-                    date.setDate(date.getDate() - (w * 7 + (6 - d)));
-                    const dateStr = date.toISOString().split('T')[0];
-                    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-                    const prod = getProductivityForDay(currentUser, dateStr, dayName);
-                    weekTotal += prod.total;
-                    weekChecked += prod.checked;
-                }
+                for (let w = 0; w < 4; w++) {
+                    let weekTotal = 0, weekChecked = 0;
+                    for (let d = 0; d < 7; d++) {
+                        const date = new Date();
+                        date.setDate(date.getDate() - (w * 7 + (6 - d)));
+                        const dateStr = date.toISOString().split('T')[0];
+                        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+                        const prod = getProductivityForDay(currentUser, dateStr, dayName);
+                        weekTotal += prod.total;
+                        weekChecked += prod.checked;
+                    }
 
-                const missed = weekTotal - weekChecked;
-                const pct = weekTotal > 0 ? Math.round((weekChecked / weekTotal) * 100) : 0;
-                const missedPct = weekTotal > 0 ? Math.round((missed / weekTotal) * 100) : 0;
+                    const missed = weekTotal - weekChecked;
+                    const pct = weekTotal > 0 ? Math.round((weekChecked / weekTotal) * 100) : 0;
+                    const missedPct = weekTotal > 0 ? Math.round((missed / weekTotal) * 100) : 0;
 
-                monthlyHtml += `
+                    monthlyHtml += `
                     <div class="month-week-row">
                         <div class="month-week-label">${weekLabels[w]}</div>
                         <div class="month-week-bar-track">
@@ -1126,9 +1494,9 @@
                         </div>
                     </div>
                 `;
-            }
+                }
 
-            container.innerHTML = `
+                container.innerHTML = `
                 <div class="habit-card-title">Check-in Summary</div>
 
                 <div class="today-progress">
@@ -1150,93 +1518,133 @@
                 <div class="habit-card-title" style="margin-top: 0.25rem;">Monthly Tracking</div>
                 <div class="monthly-uncompleted">${monthlyHtml}</div>
             `;
-        }
-
-        // ========================================
-        // HELPERS
-        // ========================================
-        function getWeekDates() {
-            const dates = [];
-            const now = new Date();
-            const day = now.getDay();
-            const mondayOffset = day === 0 ? -6 : 1 - day;
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(now);
-                d.setDate(now.getDate() + mondayOffset + i);
-                dates.push(d.toISOString().split('T')[0]);
             }
-            return dates;
-        }
 
-        function getProductivityForDay(user, dateStr, dayName) {
-            const checkIns = (user.checkIns && user.checkIns[dateStr]) || {};
-            let total = 0, checked = 0;
-            Object.keys(user.timetable || {}).forEach(key => {
-                if (key.startsWith(dayName + '-')) {
-                    total++;
-                    if (checkIns[key]) checked++;
+            // ========================================
+            // HELPERS
+            // ========================================
+            function getWeekDates() {
+                const dates = [];
+                const now = new Date();
+                const day = now.getDay();
+                const mondayOffset = day === 0 ? -6 : 1 - day;
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(now);
+                    d.setDate(now.getDate() + mondayOffset + i);
+                    dates.push(d.toISOString().split('T')[0]);
                 }
-            });
-            return { total, checked };
-        }
-
-        // ========================================
-        // MODAL LOGIC
-        // ========================================
-        const modal = document.getElementById('task-modal');
-        const nameInput = document.getElementById('task-name-input');
-        const typeInput = document.getElementById('task-type-input');
-        const titleEl = document.getElementById('modal-title');
-        const subtitleEl = document.getElementById('modal-subtitle');
-
-        function openModal(key, currentName, currentType) {
-            currentKey = key;
-            const [day, hour] = key.split('-');
-            subtitleEl.textContent = `${day} - ${hour}`;
-            nameInput.value = currentName || '';
-            typeInput.value = currentType || 'work';
-            modal.classList.add('open');
-            nameInput.focus();
-        }
-
-        function closeModal() {
-            modal.classList.remove('open');
-            currentKey = null;
-        }
-
-        function saveTask() {
-            if (!currentKey || !currentUser) return;
-            const name = nameInput.value.trim();
-            const type = typeInput.value;
-            const user = appData.users.find(u => u.name === currentUser.name);
-            if (name) {
-                user.timetable[currentKey] = { name, type };
-            } else {
-                delete user.timetable[currentKey];
+                return dates;
             }
-            StorageManager.save(appData);
-            renderAll();
-            closeModal();
-        }
 
-        function deleteTask() {
-            nameInput.value = '';
-            saveTask();
-        }
+            function getProductivityForDay(user, dateStr, dayName) {
+                const checkIns = (user.checkIns && user.checkIns[dateStr]) || {};
+                let total = 0, checked = 0;
+                Object.keys(user.timetable || {}).forEach(key => {
+                    if (key.startsWith(dayName + '-')) {
+                        total++;
+                        if (checkIns[key]) checked++;
+                    }
+                });
+                return { total, checked };
+            }
 
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
+            // ========================================
+            // MODAL LOGIC
+            // ========================================
+            const modal = document.getElementById('task-modal');
+            const nameInput = document.getElementById('task-name-input');
+            const typeInput = document.getElementById('task-type-input');
+            const titleEl = document.getElementById('modal-title');
+            const subtitleEl = document.getElementById('modal-subtitle');
 
-        nameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') saveTask();
-        });
+            function openModal(key, currentName, currentType) {
+                const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+                if (!currentUser || currentUser.name !== loggedInUser) return;
 
-        // ========================================
-        // BOOT
-        // ========================================
-        document.addEventListener('DOMContentLoaded', init);
-    </script>
+                currentKey = key;
+                const [day, hour] = key.split('-');
+                subtitleEl.textContent = `${day} - ${hour}`;
+                nameInput.value = currentName || '';
+                typeInput.value = currentType || 'work';
+                modal.classList.add('open');
+                nameInput.focus();
+            }
+
+            function closeModal() {
+                modal.classList.remove('open');
+                currentKey = null;
+            }
+
+            function saveTask() {
+                if (!currentKey || !currentUser) return;
+                const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+                if (currentUser.name !== loggedInUser) return;
+
+                const name = nameInput.value.trim();
+                const type = typeInput.value;
+                const user = appData.users.find(u => u.name === currentUser.name);
+                if (name) {
+                    user.timetable[currentKey] = { name, type };
+                } else {
+                    delete user.timetable[currentKey];
+                }
+                StorageManager.save(appData);
+                renderAll();
+                closeModal();
+            }
+
+            function deleteTask() {
+                nameInput.value = '';
+                saveTask();
+            }
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+
+            nameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') saveTask();
+            });
+
+            // ========================================
+            // BOOT
+            // ========================================
+
+            // Helper: get the current hour as an HOURS-format string
+            function getCurrentHourStr() {
+                const h = new Date().getHours();
+                if (h === 0) return '12 AM';
+                if (h < 12) return h + ' AM';
+                if (h === 12) return '12 PM';
+                return (h - 12) + ' PM';
+            }
+
+            // Countdown: time remaining in the day
+            function startCountdown() {
+                function update() {
+                    const now = new Date();
+                    const endOfDay = new Date(now);
+                    endOfDay.setHours(23, 59, 59, 999);
+                    const diff = endOfDay - now;
+
+                    const hours = Math.floor(diff / 3600000);
+                    const mins = Math.floor((diff % 3600000) / 60000);
+                    const secs = Math.floor((diff % 60000) / 1000);
+
+                    const el = document.getElementById('countdown-text');
+                    if (el) {
+                        el.textContent = `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} left today`;
+                    }
+                }
+                update();
+                setInterval(update, 1000);
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                init();
+                startCountdown();
+            });
+        </script>
 </body>
 
 </html>

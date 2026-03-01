@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Deadlinr</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--bg);
+        }
+
+        .login-container {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        .login-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: var(--font-display);
+            color: var(--title-color);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.05em;
+        }
+
+        .login-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .user-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <h2 class="login-title">Deadlinr</h2>
+        <p class="login-subtitle">Select your profile to authenticate</p>
+        <div class="user-cards" id="user-cards-container">
+            <div style="color: var(--text-muted); text-align: center; padding: 2rem;">Loading profiles...</div>
+        </div>
+    </div>
+
+    <script src="logic.js"></script>
+    <script src="auth.js"></script>
+</body>
+
+</html>

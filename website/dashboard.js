@@ -1,18 +1,10 @@
 // Dashboard Logic with User Switching and Functional Stats
-let appData = StorageManager.load();
-
-// Check if user is logged in via auth system
-let activeUser = null;
-if (typeof AuthManager !== 'undefined' && AuthManager.isLoggedIn()) {
-  activeUser = AuthManager.getCurrentUser();
-} else {
-  activeUser = appData.users[0].name; // Default to first user if not logged in
-}
-
+let appData = null;      // populated async on load
+let activeUser = null;   // set after appData is ready
 let roastInterval = null;
 
-function saveData() {
-  StorageManager.save(appData);
+async function saveData() {
+  await StorageManager.save(appData);
 }
 
 // ========================================
@@ -21,12 +13,19 @@ function saveData() {
 
 function initUserSwitcher() {
   const switcher = document.getElementById('user-switcher');
+  const safeName = (n) => n.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
   switcher.innerHTML = appData.users.map(user => `
     <div class="user-pill ${user.name === activeUser ? 'active' : ''}" 
-         onclick="switchUserDashboard('${user.name}')">
-      <span class="user-pill-indicator"></span>${user.name}
+         data-user="${safeName(user.name)}">
+      <span class="user-pill-indicator"></span>${safeName(user.name)}
     </div>
   `).join('');
+
+  // Event delegation — safe from XSS
+  switcher.onclick = (e) => {
+    const pill = e.target.closest('[data-user]');
+    if (pill) switchUserDashboard(pill.dataset.user);
+  };
 }
 
 function switchUserDashboard(userName) {
@@ -43,7 +42,7 @@ function switchUserDashboard(userName) {
 
     // Fade back in
     dashboardHero.classList.remove('transitioning');
-  }, 200);
+  }, 350);
 }
 
 // ========================================
@@ -60,18 +59,30 @@ function calculateRealTimeStats() {
 }
 
 function getRivalLeader() {
-  let leaderData = { name: null, role: null, count: 0 };
+  // Rank users by streak + today's completion rate
+  const todayStr = new Date().toISOString().split('T')[0];
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayName = days[new Date().getDay()];
+  let leaderData = { name: null, role: null, score: -1 };
 
   appData.users.forEach(user => {
-    // Count tasks in timetable
-    const taskCount = Object.keys(user.timetable || {}).length;
+    // Count today's tasks and check-ins
+    let todayTotal = 0, todayChecked = 0;
+    Object.keys(user.timetable || {}).forEach(key => {
+      const hyphenIdx = key.indexOf('-');
+      if (key.substring(0, hyphenIdx) === todayName) {
+        todayTotal++;
+        if (user.checkIns && user.checkIns[todayStr] && user.checkIns[todayStr][key]) {
+          todayChecked++;
+        }
+      }
+    });
 
-    if (taskCount > leaderData.count) {
-      leaderData = {
-        name: user.name,
-        role: user.role,
-        count: taskCount
-      };
+    const completionRate = todayTotal > 0 ? todayChecked / todayTotal : 0;
+    const score = (user.streak * 2) + (completionRate * 10) + todayChecked;
+
+    if (score > leaderData.score) {
+      leaderData = { name: user.name, role: user.role, score };
     }
   });
 
@@ -81,33 +92,52 @@ function getRivalLeader() {
 function calculateDaysUntilReset() {
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ...
-  const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+  // Monday = 1, so: Mon→0, Tue→6, Wed→5, Thu→4, Fri→3, Sat→2, Sun→1
+  const daysUntilMonday = (8 - dayOfWeek) % 7;
   return daysUntilMonday;
 }
 
 function generateDynamicRoast() {
-  // Find user with lowest task count or broken streak
-  let targetUser = null;
-  let lowestScore = Infinity;
+  // Find user with worst performance today (lowest check-in rate + lowest streak)
+  const todayStr = new Date().toISOString().split('T')[0];
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const todayName = days[new Date().getDay()];
+
+  let worstUser = null;
+  let worstScore = Infinity;
 
   appData.users.forEach(user => {
-    const taskCount = Object.keys(user.timetable || {}).length;
-    const score = taskCount + (user.streak * 2);
+    let todayTotal = 0, todayChecked = 0;
+    Object.keys(user.timetable || {}).forEach(key => {
+      const hyphenIdx = key.indexOf('-');
+      if (key.substring(0, hyphenIdx) === todayName) {
+        todayTotal++;
+        if (user.checkIns && user.checkIns[todayStr] && user.checkIns[todayStr][key]) {
+          todayChecked++;
+        }
+      }
+    });
 
-    if (score < lowestScore) {
-      lowestScore = score;
-      targetUser = user;
+    const missed = todayTotal - todayChecked;
+    const score = todayChecked + (user.streak * 2) - (missed * 3);
+
+    if (score < worstScore) {
+      worstScore = score;
+      worstUser = { ...user, todayTotal, todayChecked, missed };
     }
   });
 
-  if (!targetUser) return "Everyone's crushing it today!";
+  if (!worstUser) return "Everyone's crushing it today!";
+
+  const { name, role, streak, todayTotal, todayChecked, missed } = worstUser;
+  const pct = todayTotal > 0 ? Math.round((todayChecked / todayTotal) * 100) : 0;
 
   const roasts = [
-    `${targetUser.name} has ${Object.keys(targetUser.timetable || {}).length} tasks. The tribunal is watching.`,
-    `Momentum alert: ${targetUser.name} needs to step it up.`,
-    `${targetUser.name}'s streak is ${targetUser.streak}. Not impressive.`,
-    `The ${targetUser.role} is falling behind. Unacceptable.`,
-    `${targetUser.name}, where's the hustle? 🤔`
+    missed > 0 ? `${name} missed ${missed} task${missed > 1 ? 's' : ''} today. The tribunal watches.` : `${name} is clear... for now.`,
+    `${name}'s streak is ${streak}. ${streak === 0 ? 'Pathetic.' : streak < 3 ? 'Barely alive.' : 'Decent, but not enough.'}`,
+    `The ${role} is at ${pct}% today. ${pct < 50 ? 'Unacceptable.' : pct < 100 ? 'Could do better.' : 'Impressive.'}`,
+    missed > 2 ? `${name} left ${missed} tasks undone. Fraud detected. 🚨` : `${name}, where's the hustle? 🤔`,
+    `Momentum check: ${name} has ${todayChecked}/${todayTotal} today. ${todayChecked === 0 ? 'Ghost mode activated.' : 'Keep pushing.'}`
   ];
 
   return roasts[Math.floor(Math.random() * roasts.length)];
@@ -121,7 +151,8 @@ function updateStatsDisplay() {
 
   // Rival Mode
   document.getElementById('rival-leader').textContent = stats.rivalLeader;
-  document.getElementById('rival-reset').textContent = `Reset in ${calculateDaysUntilReset()} days`;
+  const resetDays = calculateDaysUntilReset();
+  document.getElementById('rival-reset').textContent = resetDays === 0 ? 'Resets today!' : `Reset in ${resetDays} day${resetDays !== 1 ? 's' : ''}`;
 
   // Roast Feed (initial)
   document.getElementById('roast-text').textContent = `"${stats.roast}"`;
@@ -156,6 +187,10 @@ function initDashboardControls() {
 }
 
 function addTaskToDashboard() {
+  // Ownership check: only allow adding tasks to your own dashboard
+  const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+  if (activeUser !== loggedInUser) return;
+
   const taskName = document.getElementById('task-name-input').value.trim();
   const taskType = document.getElementById('task-type-select').value;
   const taskDay = document.getElementById('task-day-select').value;
@@ -200,6 +235,10 @@ function addTaskToDashboard() {
 }
 
 function markTaskDone(timetableKey) {
+  // Ownership check: only owner can toggle check-ins
+  const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+  if (activeUser !== loggedInUser) return;
+
   const user = appData.users.find(u => u.name === activeUser);
   if (!user) return;
 
@@ -225,7 +264,7 @@ function renderTodayTasks() {
   const user = appData.users.find(u => u.name === activeUser);
   if (!user) return;
 
-  const todayTasks = getNextTasks(user, 10); // Get all tasks for today
+  const todayTasks = getNextTasks(user, 50); // Get all tasks for today
   const container = document.getElementById('today-tasks-list');
 
   if (todayTasks.length === 0) {
@@ -241,6 +280,9 @@ function renderTodayTasks() {
   const todayStr = new Date().toISOString().split('T')[0];
   const todayCheckIns = (user.checkIns && user.checkIns[todayStr]) || {};
 
+  const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+  const isOwner = (activeUser === loggedInUser);
+
   container.innerHTML = todayTasks.map(task => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const currentDay = days[new Date().getDay()];
@@ -255,9 +297,9 @@ function renderTodayTasks() {
           <span class="task-type-badge task-${task.type}">${task.type}</span>
         </div>
         <div class="task-actions">
-          <button class="task-action-btn done" style="${isDone ? 'background: rgba(16,185,129,0.3); color: #10b981;' : ''}" onclick="markTaskDone('${timetableKey}')">
+          ${isOwner ? `<button class="task-action-btn done" style="${isDone ? 'background: rgba(16,185,129,0.3); color: #10b981; pointer-events: auto;' : 'pointer-events: auto;'}" onclick="markTaskDone('${timetableKey}');">
             ${isDone ? 'Undo' : 'Done'}
-          </button>
+          </button>` : ''}
         </div>
       </div>
     `;
@@ -273,7 +315,10 @@ function refreshDashboard() {
   if (user) {
     document.getElementById('dashboard-title').textContent = `${user.name}'s Dashboard`;
     document.getElementById('user-streak').textContent = user.streak;
-    document.getElementById('user-momentum').textContent = Math.min(user.streak * 10, 100);
+    document.getElementById('user-momentum').textContent = calculateMomentum(
+      Object.keys(user.timetable || {}).length > 0 ? Math.min(user.streak * 15, 100) : 0,
+      user.streak
+    );
   }
 
   // Render today's tasks for active user
@@ -281,6 +326,22 @@ function refreshDashboard() {
 
   // Update stats
   updateStatsDisplay();
+
+  // Enforce frontend restrictions
+  const loggedInUser = typeof AuthManager !== 'undefined' ? AuthManager.getCurrentUser() : null;
+  const isOwner = (activeUser === loggedInUser);
+  const addTaskBtn = document.getElementById('add-task-btn');
+  const taskInputs = document.querySelectorAll('.task-form input, .task-form select');
+
+  if (addTaskBtn) {
+    if (isOwner) {
+      addTaskBtn.style.display = 'block';
+      taskInputs.forEach(input => input.disabled = false);
+    } else {
+      addTaskBtn.style.display = 'none';
+      taskInputs.forEach(input => input.disabled = true);
+    }
+  }
 }
 
 function initDashboard() {
@@ -299,5 +360,16 @@ function initDashboard() {
   startRoastRotation();
 }
 
-// Run on page load
-document.addEventListener('DOMContentLoaded', initDashboard);
+// Run on page load (async bootstrap)
+document.addEventListener('DOMContentLoaded', async () => {
+  appData = await StorageManager.load();
+
+  // Determine active user after data is loaded
+  if (typeof AuthManager !== 'undefined' && AuthManager.isLoggedIn()) {
+    activeUser = AuthManager.getCurrentUser();
+  } else {
+    activeUser = appData.users[0].name;
+  }
+
+  initDashboard();
+});

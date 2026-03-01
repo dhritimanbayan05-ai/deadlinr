@@ -4,24 +4,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Protocol - Dashboard</title>
+    <title>Deadlinr - Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
     <div class="container">
         <!-- Header -->
-        <header class="flex justify-between items-center" style="margin-bottom: 2rem;">
-            <h1 style="font-size: 2.5rem; font-weight: bold; letter-spacing: -0.05em;">The Protocol</h1>
-            <div class="flex gap-4">
+        <div class="page-header-container" style="margin-top: 2rem;">
+            <h1 class="page-header">Deadlinr</h1>
+            <div class="header-actions">
                 <a href="timetable.html" class="btn btn-surface">Timetable</a>
                 <a href="lifeweeks.html" class="btn btn-surface">Life Weeks</a>
                 <button class="btn btn-primary" id="check-in-btn">Check In</button>
             </div>
-        </header>
+        </div>
 
         <!-- User Switcher Pills -->
         <div class="user-switcher" id="user-switcher">
@@ -125,17 +127,6 @@
             </div>
         </section>
 
-    </div>
-
-    <!-- Login Modal -->
-    <div class="login-modal-overlay" id="login-modal">
-        <div class="login-modal-content">
-            <h2 class="login-modal-title">Select Your Profile</h2>
-            <p class="login-modal-subtitle">Choose your account to continue</p>
-            <div class="user-cards" id="user-cards-container">
-                <!-- User cards will be dynamically generated -->
-            </div>
-        </div>
     </div>
 
     <script src="logic.js"></script>
