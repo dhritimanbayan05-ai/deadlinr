@@ -96,11 +96,21 @@ app.get('/api/data', async (req, res) => {
         const data = doc.toObject({ versionKey: false });
         delete data._id;
         delete data.createdAt;
-        delete data.updatedAt;
+        // Keep updatedAt so clients can detect changes
         res.json(data);
     } catch (err) {
         console.error('GET /api/data error:', err);
         res.status(500).json({ error: 'Failed to load data' });
+    }
+});
+
+// GET /api/data/version  →  lightweight change-check (returns only updatedAt)
+app.get('/api/data/version', async (req, res) => {
+    try {
+        const doc = await AppData.findOne().select('updatedAt').lean();
+        res.json({ updatedAt: doc ? doc.updatedAt : null });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to get version' });
     }
 });
 

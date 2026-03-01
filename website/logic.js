@@ -6,7 +6,7 @@ const StorageManager = {
     MIGRATED_KEY: 'protocol_migrated_to_mongo',
     DATA_VERSION: 3,
     API_BASE: '/api',          // relative URL – works when served by the backend
-    _lastSyncHash: null,
+    _lastUpdatedAt: null,      // Server-side timestamp for change detection
 
     // ── Default seed data ──────────────────────────────────────
     getDefaultData() {
@@ -107,6 +107,15 @@ const StorageManager = {
         return data;
     },
 
+    // ── Strip server-only fields before using data locally ─────
+    _cleanServerFields(data) {
+        delete data.updatedAt;
+        if (data.users) {
+            data.users.forEach(u => { delete u._id; });
+        }
+        return data;
+    },
+
     // ── Load from backend; fall back to localStorage ───────────
     async load() {
         try {
@@ -117,17 +126,20 @@ const StorageManager = {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             if (!data || !data.users) throw new Error('Invalid payload');
+
+            // Track the server timestamp for sync polling
+            if (data.updatedAt) this._lastUpdatedAt = data.updatedAt;
+            this._cleanServerFields(data);
+
             const migrated = this._migrate(data);
             pruneOldCheckIns(migrated);
             updateStreaks(migrated);
-            this._lastSyncHash = JSON.stringify(migrated);
             return migrated;
         } catch (err) {
             console.warn('[StorageManager] Backend unavailable, using localStorage:', err.message);
             const local = this._loadLocal();
             pruneOldCheckIns(local);
             updateStreaks(local);
-            this._lastSyncHash = JSON.stringify(local);
             return local;
         }
     },
@@ -136,7 +148,6 @@ const StorageManager = {
     async save(data) {
         // Always keep localStorage in sync as a fallback cache
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
-        this._lastSyncHash = JSON.stringify(data);
 
         let headers = { 'Content-Type': 'application/json' };
         if (typeof AuthManager !== 'undefined' && AuthManager.isLoggedIn()) {
@@ -150,6 +161,14 @@ const StorageManager = {
                 body: JSON.stringify(data)
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+            // After a successful save, update the timestamp so the next
+            // sync poll doesn't re-fetch our own change.
+            const vRes = await fetch(`${this.API_BASE}/data/version`);
+            if (vRes.ok) {
+                const { updatedAt } = await vRes.json();
+                if (updatedAt) this._lastUpdatedAt = updatedAt;
+            }
         } catch (err) {
             console.warn('[StorageManager] Save to backend failed (kept in localStorage):', err.message);
         }
@@ -162,34 +181,45 @@ const StorageManager = {
         try {
             await fetch(`${this.API_BASE}/data`, { method: 'DELETE' });
         } catch (_) { }
-        this._lastSyncHash = null;
+        this._lastUpdatedAt = null;
         return this.getDefaultData();
     },
 
     // ── Periodic Sync from Backend ────────────────────────────
+    // Checks server timestamp every 5s. If changed, fetches full
+    // data and fires a CustomEvent for UI re-render.
     startSync() {
         if (this._syncInterval) clearInterval(this._syncInterval);
         this._syncInterval = setInterval(async () => {
             try {
+                // Step 1: lightweight timestamp check
+                const vRes = await fetch(`${this.API_BASE}/data/version`);
+                if (!vRes.ok) return;
+                const { updatedAt } = await vRes.json();
+
+                // No change since last sync
+                if (!updatedAt || updatedAt === this._lastUpdatedAt) return;
+
+                // Step 2: timestamp changed — fetch full data
+                console.log('[StorageManager] Backend data changed. Syncing…');
                 const res = await fetch(`${this.API_BASE}/data`);
                 if (!res.ok) return;
                 const data = await res.json();
                 if (!data || !data.users) return;
+
+                // Update timestamp tracker
+                this._lastUpdatedAt = data.updatedAt || updatedAt;
+                this._cleanServerFields(data);
+
                 const migrated = this._migrate(data);
                 pruneOldCheckIns(migrated);
                 updateStreaks(migrated);
 
-                const newHash = JSON.stringify(migrated);
-                if (this._lastSyncHash !== newHash) {
-                    console.log('[StorageManager] Data changed on backend. Syncing...');
-                    this._lastSyncHash = newHash;
-                    localStorage.setItem(this.STORAGE_KEY, newHash);
-
-                    // Dispatch custom event to notify UI
-                    window.dispatchEvent(new CustomEvent('appDataSynced', { detail: migrated }));
-                }
+                // Cache locally & notify UI
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(migrated));
+                window.dispatchEvent(new CustomEvent('appDataSynced', { detail: migrated }));
             } catch (err) {
-                // Ignore background sync errors
+                // Ignore background sync errors silently
             }
         }, 5000);
     },
