@@ -627,6 +627,12 @@
         document.addEventListener('DOMContentLoaded', async () => {
             appData = await StorageManager.load();
             renderLifeWeeks();
+
+            window.addEventListener('appDataSynced', (e) => {
+                appData = e.detail;
+                renderLifeWeeks();
+            });
+            StorageManager.startSync();
         });
     </script>
 </body>

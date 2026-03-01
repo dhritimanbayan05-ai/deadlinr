@@ -6,6 +6,7 @@ const StorageManager = {
     MIGRATED_KEY: 'protocol_migrated_to_mongo',
     DATA_VERSION: 3,
     API_BASE: '/api',          // relative URL – works when served by the backend
+    _lastSyncHash: null,
 
     // ── Default seed data ──────────────────────────────────────
     getDefaultData() {
@@ -119,12 +120,14 @@ const StorageManager = {
             const migrated = this._migrate(data);
             pruneOldCheckIns(migrated);
             updateStreaks(migrated);
+            this._lastSyncHash = JSON.stringify(migrated);
             return migrated;
         } catch (err) {
             console.warn('[StorageManager] Backend unavailable, using localStorage:', err.message);
             const local = this._loadLocal();
             pruneOldCheckIns(local);
             updateStreaks(local);
+            this._lastSyncHash = JSON.stringify(local);
             return local;
         }
     },
@@ -133,6 +136,7 @@ const StorageManager = {
     async save(data) {
         // Always keep localStorage in sync as a fallback cache
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+        this._lastSyncHash = JSON.stringify(data);
 
         let headers = { 'Content-Type': 'application/json' };
         if (typeof AuthManager !== 'undefined' && AuthManager.isLoggedIn()) {
@@ -158,7 +162,36 @@ const StorageManager = {
         try {
             await fetch(`${this.API_BASE}/data`, { method: 'DELETE' });
         } catch (_) { }
+        this._lastSyncHash = null;
         return this.getDefaultData();
+    },
+
+    // ── Periodic Sync from Backend ────────────────────────────
+    startSync() {
+        if (this._syncInterval) clearInterval(this._syncInterval);
+        this._syncInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`${this.API_BASE}/data`);
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data || !data.users) return;
+                const migrated = this._migrate(data);
+                pruneOldCheckIns(migrated);
+                updateStreaks(migrated);
+
+                const newHash = JSON.stringify(migrated);
+                if (this._lastSyncHash !== newHash) {
+                    console.log('[StorageManager] Data changed on backend. Syncing...');
+                    this._lastSyncHash = newHash;
+                    localStorage.setItem(this.STORAGE_KEY, newHash);
+
+                    // Dispatch custom event to notify UI
+                    window.dispatchEvent(new CustomEvent('appDataSynced', { detail: migrated }));
+                }
+            } catch (err) {
+                // Ignore background sync errors
+            }
+        }, 5000);
     },
 
     // ── Internal: localStorage fallback ───────────────────────

@@ -372,4 +372,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   initDashboard();
+
+  window.addEventListener('appDataSynced', (e) => {
+    appData = e.detail;
+    refreshDashboard();
+  });
+  StorageManager.startSync();
 });

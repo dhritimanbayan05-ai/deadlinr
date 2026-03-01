@@ -1073,6 +1073,12 @@
 
                 autoUnlockIfNewWeek();
                 renderAll();
+
+                window.addEventListener('appDataSynced', (e) => {
+                    appData = e.detail;
+                    renderAll();
+                });
+                StorageManager.startSync();
             }
 
             async function onUserSwitch() {
