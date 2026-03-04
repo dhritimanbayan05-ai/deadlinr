@@ -74,15 +74,36 @@ app.use('/api', async (_req, res, next) => {
     }
 });
 
+const zlib = require('zlib');
+
 // Helper – always return (or create) the single AppData doc
 async function getOrCreateDoc() {
-    let doc = await AppData.findOne();
-    if (!doc) {
-        doc = new AppData({});
-        await doc.save();
+    let raw = await AppData.findOne();
+    let data;
+
+    if (!raw) {
+        data = { _version: 4, users: [], votes: [], weekStartDate: new Date().toISOString() };
+        raw = new AppData({ payload: zlib.deflateSync(JSON.stringify(data)) });
+        await raw.save();
         console.log('Created default AppData document');
+    } else if (raw.users && !raw.payload) {
+        // MIGRATION: Convert uncompressed legacy BSON to compressed Buffer
+        data = {
+            _version: 4,
+            users: raw.users,
+            votes: raw.votes || [],
+            weekStartDate: raw.weekStartDate || new Date().toISOString()
+        };
+        raw.payload = zlib.deflateSync(JSON.stringify(data));
+        raw.users = undefined;
+        raw.votes = undefined;
+        raw.weekStartDate = undefined;
+        await raw.save();
+        console.log('Migrated old AppData to compressed payload');
+    } else {
+        data = JSON.parse(zlib.inflateSync(raw.payload));
     }
-    return doc;
+    return { raw, data };
 }
 
 // ──────────────────────────────────────────────
@@ -92,11 +113,9 @@ async function getOrCreateDoc() {
 // GET /api/data  →  return the full app data object
 app.get('/api/data', async (req, res) => {
     try {
-        const doc = await getOrCreateDoc();
-        const data = doc.toObject({ versionKey: false });
-        delete data._id;
-        delete data.createdAt;
+        const { raw, data } = await getOrCreateDoc();
         // Keep updatedAt so clients can detect changes
+        data.updatedAt = raw.updatedAt;
         res.json(data);
     } catch (err) {
         console.error('GET /api/data error:', err);
@@ -124,35 +143,37 @@ app.post('/api/data', async (req, res) => {
             return res.status(400).json({ error: 'Invalid payload: users array required' });
         }
 
-        let doc = await AppData.findOne();
-        if (!doc) {
+        let raw = await AppData.findOne();
+        if (!raw) {
             // First-time seed: allow the initial data creation without auth
-            doc = new AppData(payload);
-        } else {
-            doc._version = payload._version ?? doc._version;
-
-            if (!authUser) {
-                return res.status(403).json({ error: 'Forbidden: x-user-name header required' });
-            }
-
-            // Only merge the authenticated user's data
-            const incomingUserData = payload.users.find(u => u.name === authUser);
-            if (incomingUserData) {
-                const idx = doc.users.findIndex(u => u.name === authUser);
-                if (idx !== -1) {
-                    Object.assign(doc.users[idx], incomingUserData);
-                } else {
-                    doc.users.push(incomingUserData);
-                }
-            }
-
-            doc.votes = payload.votes ?? doc.votes;
-            doc.weekStartDate = payload.weekStartDate ?? doc.weekStartDate;
-            doc.markModified('users');
-            doc.markModified('votes');
+            raw = new AppData({ payload: zlib.deflateSync(JSON.stringify(payload)) });
+            await raw.save();
+            return res.json({ ok: true });
         }
 
-        await doc.save();
+        const { data } = await getOrCreateDoc();
+        data._version = payload._version ?? data._version;
+
+        if (!authUser) {
+            return res.status(403).json({ error: 'Forbidden: x-user-name header required' });
+        }
+
+        // Only merge the authenticated user's data
+        const incomingUserData = payload.users.find(u => u.name === authUser);
+        if (incomingUserData) {
+            const idx = data.users.findIndex(u => u.name === authUser);
+            if (idx !== -1) {
+                Object.assign(data.users[idx], incomingUserData);
+            } else {
+                data.users.push(incomingUserData);
+            }
+        }
+
+        data.votes = payload.votes ?? data.votes;
+        data.weekStartDate = payload.weekStartDate ?? data.weekStartDate;
+
+        raw.payload = zlib.deflateSync(JSON.stringify(data));
+        await raw.save();
         res.json({ ok: true });
     } catch (err) {
         console.error('POST /api/data error:', err);
@@ -171,15 +192,15 @@ app.patch('/api/data/user/:name', async (req, res) => {
             return res.status(403).json({ error: 'Forbidden: You can only edit your own data' });
         }
 
-        const doc = await getOrCreateDoc();
-        const idx = doc.users.findIndex(u => u.name === name);
+        const { raw, data } = await getOrCreateDoc();
+        const idx = data.users.findIndex(u => u.name === name);
         if (idx === -1) {
             return res.status(404).json({ error: `User "${name}" not found` });
         }
 
-        Object.assign(doc.users[idx], updates);
-        doc.markModified('users');
-        await doc.save();
+        Object.assign(data.users[idx], updates);
+        raw.payload = zlib.deflateSync(JSON.stringify(data));
+        await raw.save();
 
         res.json({ ok: true });
     } catch (err) {
